@@ -1,0 +1,46 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "command": "echo 'Checking command safety...'"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "command": "npx prettier --write \"$CLAUDE_FILE_PATH\" 2>/dev/null || true"
+      },
+      {
+        "matcher": "Write",
+        "command": "npx prettier --write \"$CLAUDE_FILE_PATH\" 2>/dev/null || true"
+      }
+    ],
+    "Stop": [
+      {
+        "command": "grep -r 'console.log' src/ --include='*.ts' --include='*.tsx' 2>/dev/null | head -5 && echo '⚠️  Found console.log statements - consider removing before commit' || true"
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx expo *)",
+      "Bash(npx prettier *)",
+      "Bash(npx eslint *)",
+      "Bash(git *)",
+      "Bash(mkdir *)",
+      "Bash(ls *)",
+      "Bash(cat *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(sudo *)"
+    ]
+  },
+  "model": "sonnet",
+  "contextWindow": {
+    "warningThreshold": 0.7,
+    "autoCompact": true
+  }
+}
