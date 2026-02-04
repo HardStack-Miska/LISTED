@@ -1,0 +1,28 @@
+{
+  "initialized": true,
+  "topology": "mesh",
+  "workers": [
+    "hive-worker-1770249062377-x6hp"
+  ],
+  "consensus": {
+    "pending": [],
+    "history": []
+  },
+  "sharedMemory": {
+    "broadcasts": [
+      {
+        "messageId": "msg-1770249077877-eujrkl",
+        "priority": "normal",
+        "fromId": "system",
+        "timestamp": "2026-02-04T23:51:17.877Z"
+      }
+    ]
+  },
+  "createdAt": "2026-02-04T23:50:56.949Z",
+  "updatedAt": "2026-02-04T23:51:17.877Z",
+  "queen": {
+    "agentId": "queen-1770249056949",
+    "electedAt": "2026-02-04T23:50:56.949Z",
+    "term": 1
+  }
+}

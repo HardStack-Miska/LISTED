@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "claude-flow": {
+      "command": "claude-flow",
+      "args": ["mcp", "start"],
+      "env": {
+        "CLAUDE_FLOW_MODE": "v3",
+        "CLAUDE_FLOW_HOOKS_ENABLED": "true",
+        "CLAUDE_FLOW_TOPOLOGY": "hierarchical",
+        "CLAUDE_FLOW_MAX_AGENTS": "8",
+        "CLAUDE_FLOW_MEMORY_BACKEND": "hybrid",
+        "CLAUDE_FLOW_PROJECT": "LISTED"
+      },
+      "autoStart": true
+    }
+  }
+}
