@@ -1,6 +1,6 @@
-import React from 'react';
-import { Stack } from 'expo-router';
-import { COLORS } from '@/constants';
+import React from "react";
+import { Stack } from "expo-router";
+import { COLORS } from "@/constants";
 
 export default function NotesLayout() {
   return (
@@ -11,20 +11,20 @@ export default function NotesLayout() {
         },
         headerTintColor: COLORS.text,
         headerTitleStyle: {
-          fontWeight: '600',
+          fontWeight: "600",
         },
       }}
     >
       <Stack.Screen
         name="index"
         options={{
-          title: 'Заметки',
+          headerShown: false,
         }}
       />
       <Stack.Screen
         name="[id]"
         options={{
-          title: 'Заметка',
+          title: "Заметка",
         }}
       />
     </Stack>

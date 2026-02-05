@@ -41,6 +41,14 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Normalize date to start of day for comparison
+  const getDateDay = (date: Date | undefined): number => {
+    if (!date) return Infinity;
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+
   // Sort tasks: by date -> priority -> name
   const sortTasks = useCallback((tasks: Task[]): Task[] => {
     return [...tasks].sort((a, b) => {
@@ -49,9 +57,9 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
         return a.completed ? 1 : -1;
       }
 
-      // Sort by due date (tasks without date go last among active)
-      const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-      const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      // Sort by due date (normalized to day, tasks without date go last)
+      const aDate = getDateDay(a.dueDate);
+      const bDate = getDateDay(b.dueDate);
       if (aDate !== bDate) {
         return aDate - bDate;
       }
@@ -149,35 +157,45 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
     [sortTasks],
   );
 
-  const toggleTask = useCallback(async (id: string) => {
-    await databaseService.toggleTaskComplete(id);
-    setAllTasks((prev) =>
-      prev.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              completed: !task.completed,
-              completedAt: !task.completed ? new Date() : undefined,
-            }
-          : task,
-      ),
-    );
-  }, []);
+  const toggleTask = useCallback(
+    async (id: string) => {
+      await databaseService.toggleTaskComplete(id);
+      setAllTasks((prev) =>
+        sortTasks(
+          prev.map((task) =>
+            task.id === id
+              ? {
+                  ...task,
+                  completed: !task.completed,
+                  completedAt: !task.completed ? new Date() : undefined,
+                }
+              : task,
+          ),
+        ),
+      );
+    },
+    [sortTasks],
+  );
 
-  const toggleComplete = useCallback(async (id: string) => {
-    await databaseService.toggleTaskComplete(id);
-    setAllTasks((prev) =>
-      prev.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              completed: !task.completed,
-              completedAt: !task.completed ? new Date() : undefined,
-            }
-          : task,
-      ),
-    );
-  }, []);
+  const toggleComplete = useCallback(
+    async (id: string) => {
+      await databaseService.toggleTaskComplete(id);
+      setAllTasks((prev) =>
+        sortTasks(
+          prev.map((task) =>
+            task.id === id
+              ? {
+                  ...task,
+                  completed: !task.completed,
+                  completedAt: !task.completed ? new Date() : undefined,
+                }
+              : task,
+          ),
+        ),
+      );
+    },
+    [sortTasks],
+  );
 
   const deleteTask = useCallback(async (id: string) => {
     await databaseService.deleteTask(id);

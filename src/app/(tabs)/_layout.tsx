@@ -29,6 +29,7 @@ export default function TabsLayout() {
         name="today"
         options={{
           title: "Сегодня",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="today-outline" size={size} color={color} />
           ),

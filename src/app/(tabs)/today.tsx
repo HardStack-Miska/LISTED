@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
 import { useTaskContext } from "@/contexts";
@@ -67,12 +68,13 @@ export default function TodayScreen() {
 
   const handleTaskLongPress = useCallback(
     (id: string) => {
-      const task = tasks.find((t) => t.id === id);
+      // Use allTasks to find task even if it's the last one
+      const task = allTasks.find((t) => t.id === id);
       if (task) {
         setDeleteDialog({ visible: true, task });
       }
     },
-    [tasks],
+    [allTasks],
   );
 
   const handleDeleteConfirm = useCallback(async () => {
@@ -161,18 +163,25 @@ export default function TodayScreen() {
     </View>
   );
 
+  // Count active tasks for header
+  const activeTasksCount = todayTasks.length + overdueTasks.length;
+
   if (isLoading && tasks.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer} edges={["top"]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   const isEmpty = tasks.length === 0;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Сегодня</Text>
+        <Text style={styles.headerCount}>{activeTasksCount} активных</Text>
+      </View>
       {isEmpty ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyEmoji}>🎯</Text>
@@ -264,7 +273,7 @@ export default function TodayScreen() {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -272,6 +281,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  headerCount: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
   },
   loadingContainer: {
     flex: 1,

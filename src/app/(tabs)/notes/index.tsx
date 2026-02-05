@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { StyleSheet, View, Text } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { NoteList } from "@/components/ui/NoteList";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
@@ -73,7 +74,11 @@ export default function NotesScreen() {
   const noteTitle = deleteDialog.note?.title || "Без названия";
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Заметки</Text>
+        <Text style={styles.headerCount}>{notes.length} заметок</Text>
+      </View>
       <SearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
@@ -108,7 +113,7 @@ export default function NotesScreen() {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -116,6 +121,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  headerCount: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
   },
   emptySearchContainer: {
     flex: 1,
