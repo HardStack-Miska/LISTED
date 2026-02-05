@@ -1,5 +1,5 @@
 export const DATABASE_NAME = "listed.db";
-export const DATABASE_VERSION = 4;
+export const DATABASE_VERSION = 5;
 
 export const SCHEMA = {
   workspaces: `
@@ -182,9 +182,57 @@ export const MIGRATIONS_V4 = [
   "CREATE INDEX IF NOT EXISTS idx_activity_time ON activity_log(created_at DESC)",
 ];
 
+// Sprint 5: Projects, Settings, Search
+export const SCHEMA_V5 = {
+  projects: `
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL DEFAULT '#6366F1',
+      icon TEXT,
+      parent_id TEXT,
+      project_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (parent_id) REFERENCES projects(id) ON DELETE SET NULL
+    )
+  `,
+  settings: `
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `,
+};
+
+export const MIGRATIONS_V5 = [
+  // Projects table
+  SCHEMA_V5.projects,
+  // Settings table
+  SCHEMA_V5.settings,
+  // Indexes for projects
+  "CREATE INDEX IF NOT EXISTS idx_projects_parent ON projects(parent_id)",
+  "CREATE INDEX IF NOT EXISTS idx_projects_order ON projects(project_order)",
+  // FTS5 for full-text search on tasks
+  "CREATE VIRTUAL TABLE IF NOT EXISTS tasks_fts USING fts5(title, description, content='tasks', content_rowid='rowid')",
+  // Triggers to keep FTS in sync
+  `CREATE TRIGGER IF NOT EXISTS tasks_ai AFTER INSERT ON tasks BEGIN
+    INSERT INTO tasks_fts(rowid, title, description) VALUES (NEW.rowid, NEW.title, COALESCE(NEW.description, ''));
+  END`,
+  `CREATE TRIGGER IF NOT EXISTS tasks_ad AFTER DELETE ON tasks BEGIN
+    INSERT INTO tasks_fts(tasks_fts, rowid, title, description) VALUES('delete', OLD.rowid, OLD.title, COALESCE(OLD.description, ''));
+  END`,
+  `CREATE TRIGGER IF NOT EXISTS tasks_au AFTER UPDATE ON tasks BEGIN
+    INSERT INTO tasks_fts(tasks_fts, rowid, title, description) VALUES('delete', OLD.rowid, OLD.title, COALESCE(OLD.description, ''));
+    INSERT INTO tasks_fts(rowid, title, description) VALUES (NEW.rowid, NEW.title, COALESCE(NEW.description, ''));
+  END`,
+];
+
 export const MIGRATIONS: Record<number, string[]> = {
   1: [SCHEMA.workspaces, SCHEMA.pages, SCHEMA.blocks, ...INDEXES],
   2: [SCHEMA_V2.tasks, SCHEMA_V2.labels, SCHEMA_V2.task_labels, ...INDEXES_V2],
   3: MIGRATIONS_V3,
   4: MIGRATIONS_V4,
+  5: MIGRATIONS_V5,
 };

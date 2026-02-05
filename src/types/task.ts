@@ -81,6 +81,22 @@ export interface TaskFilter {
   search?: string;
 }
 
+// Advanced search filters for Sprint 5
+export interface SearchFilters {
+  query?: string;
+  projectId?: string;
+  labelIds?: string[];
+  priority?: Priority;
+  completed?: boolean;
+  dueDateStart?: Date;
+  dueDateEnd?: Date;
+  hasReminder?: boolean;
+  isRecurring?: boolean;
+  parentId?: string | null; // null = only root tasks, undefined = all, string = subtasks of task
+  limit?: number;
+  offset?: number;
+}
+
 export interface TaskGroup {
   title: string;
   tasks: Task[];

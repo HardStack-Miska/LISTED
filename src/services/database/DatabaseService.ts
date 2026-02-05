@@ -1,6 +1,15 @@
 import * as SQLite from "expo-sqlite";
 import { DATABASE_NAME, DATABASE_VERSION, MIGRATIONS } from "./schema";
-import type { Page, Block, Workspace, BlockType, Task } from "@/types";
+import type {
+  Page,
+  Block,
+  Workspace,
+  BlockType,
+  Task,
+  Project,
+  Label,
+  SearchFilters,
+} from "@/types";
 
 const generateId = (): string => {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -745,9 +754,7 @@ class DatabaseService {
     return { id };
   }
 
-  async getLabels(): Promise<
-    Array<{ id: string; name: string; color: string; order: number }>
-  > {
+  async getLabels(): Promise<Label[]> {
     if (!this.db) await this.initDatabase();
 
     const rows = await this.db!.getAllAsync<{
@@ -763,6 +770,131 @@ class DatabaseService {
       color: row.color,
       order: row.label_order,
     }));
+  }
+
+  async getLabel(id: string): Promise<Label | null> {
+    if (!this.db) await this.initDatabase();
+
+    const row = await this.db!.getFirstAsync<{
+      id: string;
+      name: string;
+      color: string;
+      label_order: number;
+    }>("SELECT * FROM labels WHERE id = ?", id);
+
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      color: row.color,
+      order: row.label_order,
+    };
+  }
+
+  async updateLabel(
+    id: string,
+    updates: Partial<{ name: string; color: string; order: number }>,
+  ): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    const fields: string[] = [];
+    const values: (string | number)[] = [];
+
+    if (updates.name !== undefined) {
+      fields.push("name = ?");
+      values.push(updates.name);
+    }
+    if (updates.color !== undefined) {
+      fields.push("color = ?");
+      values.push(updates.color);
+    }
+    if (updates.order !== undefined) {
+      fields.push("label_order = ?");
+      values.push(updates.order);
+    }
+
+    if (fields.length === 0) return;
+
+    values.push(id);
+
+    await this.db!.runAsync(
+      `UPDATE labels SET ${fields.join(", ")} WHERE id = ?`,
+      ...values,
+    );
+  }
+
+  async deleteLabel(id: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    await this.db!.runAsync("DELETE FROM labels WHERE id = ?", id);
+  }
+
+  async addLabelToTask(taskId: string, labelId: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    await this.db!.runAsync(
+      "INSERT OR IGNORE INTO task_labels (task_id, label_id) VALUES (?, ?)",
+      taskId,
+      labelId,
+    );
+  }
+
+  async removeLabelFromTask(taskId: string, labelId: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    await this.db!.runAsync(
+      "DELETE FROM task_labels WHERE task_id = ? AND label_id = ?",
+      taskId,
+      labelId,
+    );
+  }
+
+  async getTasksByLabel(labelId: string): Promise<Task[]> {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      title: string;
+      description: string | null;
+      priority: number;
+      due_date: string | null;
+      due_time: string | null;
+      completed: number;
+      completed_at: string | null;
+      project_id: string | null;
+      parent_id: string | null;
+      task_order: number;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT t.* FROM tasks t
+       INNER JOIN task_labels tl ON t.id = tl.task_id
+       WHERE tl.label_id = ?
+       ORDER BY t.completed ASC, t.priority ASC, t.due_date ASC`,
+      labelId,
+    );
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const labels = await this.getTaskLabels(row.id);
+        return {
+          id: row.id,
+          title: row.title,
+          description: row.description ?? undefined,
+          priority: row.priority as 1 | 2 | 3 | 4,
+          dueDate: row.due_date ? new Date(row.due_date) : undefined,
+          dueTime: row.due_time ?? undefined,
+          completed: row.completed === 1,
+          completedAt: row.completed_at
+            ? new Date(row.completed_at)
+            : undefined,
+          projectId: row.project_id ?? undefined,
+          parentId: row.parent_id ?? undefined,
+          labels,
+          order: row.task_order,
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at),
+        };
+      }),
+    );
   }
 
   // ==================== INLINE TASKS ====================
@@ -1041,6 +1173,502 @@ class DatabaseService {
       now,
       now,
     );
+  }
+
+  // ==================== PROJECTS (Sprint 5) ====================
+
+  async createProject(project: {
+    name: string;
+    color?: string;
+    icon?: string;
+    parentId?: string;
+  }): Promise<Project> {
+    if (!this.db) await this.initDatabase();
+
+    const id = generateId();
+    const now = new Date();
+
+    // Get next order
+    const result = await this.db!.getFirstAsync<{ maxOrder: number | null }>(
+      "SELECT MAX(project_order) as maxOrder FROM projects WHERE parent_id IS ?",
+      project.parentId ?? null,
+    );
+    const order = (result?.maxOrder ?? -1) + 1;
+
+    await this.db!.runAsync(
+      `INSERT INTO projects (id, name, color, icon, parent_id, project_order, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      project.name,
+      project.color ?? "#6366F1",
+      project.icon ?? null,
+      project.parentId ?? null,
+      order,
+      now.toISOString(),
+      now.toISOString(),
+    );
+
+    return {
+      id,
+      name: project.name,
+      color: project.color ?? "#6366F1",
+      icon: project.icon,
+      parentId: project.parentId,
+      order,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  async getProjects(): Promise<Project[]> {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      name: string;
+      color: string;
+      icon: string | null;
+      parent_id: string | null;
+      project_order: number;
+      created_at: string;
+      updated_at: string;
+    }>("SELECT * FROM projects ORDER BY project_order ASC");
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      color: row.color,
+      icon: row.icon ?? undefined,
+      parentId: row.parent_id ?? undefined,
+      order: row.project_order,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    }));
+  }
+
+  async getProject(id: string): Promise<Project | null> {
+    if (!this.db) await this.initDatabase();
+
+    const row = await this.db!.getFirstAsync<{
+      id: string;
+      name: string;
+      color: string;
+      icon: string | null;
+      parent_id: string | null;
+      project_order: number;
+      created_at: string;
+      updated_at: string;
+    }>("SELECT * FROM projects WHERE id = ?", id);
+
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      color: row.color,
+      icon: row.icon ?? undefined,
+      parentId: row.parent_id ?? undefined,
+      order: row.project_order,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    };
+  }
+
+  async updateProject(
+    id: string,
+    updates: Partial<{
+      name: string;
+      color: string;
+      icon: string | null;
+      parentId: string | null;
+      order: number;
+    }>,
+  ): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    const fields: string[] = [];
+    const values: (string | number | null)[] = [];
+
+    if (updates.name !== undefined) {
+      fields.push("name = ?");
+      values.push(updates.name);
+    }
+    if (updates.color !== undefined) {
+      fields.push("color = ?");
+      values.push(updates.color);
+    }
+    if (updates.icon !== undefined) {
+      fields.push("icon = ?");
+      values.push(updates.icon);
+    }
+    if (updates.parentId !== undefined) {
+      fields.push("parent_id = ?");
+      values.push(updates.parentId);
+    }
+    if (updates.order !== undefined) {
+      fields.push("project_order = ?");
+      values.push(updates.order);
+    }
+
+    if (fields.length === 0) return;
+
+    fields.push("updated_at = ?");
+    values.push(new Date().toISOString());
+    values.push(id);
+
+    await this.db!.runAsync(
+      `UPDATE projects SET ${fields.join(", ")} WHERE id = ?`,
+      ...values,
+    );
+  }
+
+  async deleteProject(id: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    // Set project_id to null for all tasks in this project
+    await this.db!.runAsync(
+      "UPDATE tasks SET project_id = NULL WHERE project_id = ?",
+      id,
+    );
+
+    // Delete the project
+    await this.db!.runAsync("DELETE FROM projects WHERE id = ?", id);
+  }
+
+  async getTasksByProject(projectId: string): Promise<Task[]> {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      title: string;
+      description: string | null;
+      priority: number;
+      due_date: string | null;
+      due_time: string | null;
+      completed: number;
+      completed_at: string | null;
+      project_id: string | null;
+      parent_id: string | null;
+      task_order: number;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT * FROM tasks WHERE project_id = ?
+       ORDER BY completed ASC, priority ASC, due_date ASC, task_order ASC`,
+      projectId,
+    );
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const labels = await this.getTaskLabels(row.id);
+        return {
+          id: row.id,
+          title: row.title,
+          description: row.description ?? undefined,
+          priority: row.priority as 1 | 2 | 3 | 4,
+          dueDate: row.due_date ? new Date(row.due_date) : undefined,
+          dueTime: row.due_time ?? undefined,
+          completed: row.completed === 1,
+          completedAt: row.completed_at
+            ? new Date(row.completed_at)
+            : undefined,
+          projectId: row.project_id ?? undefined,
+          parentId: row.parent_id ?? undefined,
+          labels,
+          order: row.task_order,
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at),
+        };
+      }),
+    );
+  }
+
+  // ==================== SUBTASKS (Sprint 5) ====================
+
+  async getSubtasks(parentId: string): Promise<Task[]> {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      title: string;
+      description: string | null;
+      priority: number;
+      due_date: string | null;
+      due_time: string | null;
+      completed: number;
+      completed_at: string | null;
+      project_id: string | null;
+      parent_id: string | null;
+      task_order: number;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT * FROM tasks WHERE parent_id = ?
+       ORDER BY completed ASC, task_order ASC`,
+      parentId,
+    );
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const labels = await this.getTaskLabels(row.id);
+        return {
+          id: row.id,
+          title: row.title,
+          description: row.description ?? undefined,
+          priority: row.priority as 1 | 2 | 3 | 4,
+          dueDate: row.due_date ? new Date(row.due_date) : undefined,
+          dueTime: row.due_time ?? undefined,
+          completed: row.completed === 1,
+          completedAt: row.completed_at
+            ? new Date(row.completed_at)
+            : undefined,
+          projectId: row.project_id ?? undefined,
+          parentId: row.parent_id ?? undefined,
+          labels,
+          order: row.task_order,
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at),
+        };
+      }),
+    );
+  }
+
+  async createSubtask(
+    parentId: string,
+    task: { title: string; priority?: number; dueDate?: Date },
+  ): Promise<{ id: string }> {
+    if (!this.db) await this.initDatabase();
+
+    // Get parent task to inherit project
+    const parent = await this.getTask(parentId);
+
+    const id = generateId();
+    const now = new Date().toISOString();
+
+    // Get next order within parent
+    const result = await this.db!.getFirstAsync<{ maxOrder: number | null }>(
+      "SELECT MAX(task_order) as maxOrder FROM tasks WHERE parent_id = ?",
+      parentId,
+    );
+    const order = (result?.maxOrder ?? -1) + 1;
+
+    await this.db!.runAsync(
+      `INSERT INTO tasks (id, title, priority, due_date, parent_id, project_id, task_order, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      task.title,
+      task.priority ?? 4,
+      task.dueDate?.toISOString() ?? null,
+      parentId,
+      parent?.projectId ?? null,
+      order,
+      now,
+      now,
+    );
+
+    return { id };
+  }
+
+  async updateTaskParent(taskId: string, newParentId?: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    await this.db!.runAsync(
+      "UPDATE tasks SET parent_id = ?, updated_at = ? WHERE id = ?",
+      newParentId ?? null,
+      new Date().toISOString(),
+      taskId,
+    );
+  }
+
+  // ==================== SEARCH (Sprint 5) ====================
+
+  async searchTasks(filters: SearchFilters): Promise<Task[]> {
+    if (!this.db) await this.initDatabase();
+
+    const conditions: string[] = [];
+    const params: (string | number | null)[] = [];
+
+    // Full-text search using FTS5
+    if (filters.query && filters.query.trim()) {
+      // Use FTS5 for text search
+      conditions.push(
+        `t.rowid IN (SELECT rowid FROM tasks_fts WHERE tasks_fts MATCH ?)`,
+      );
+      params.push(`${filters.query}*`);
+    }
+
+    // Project filter
+    if (filters.projectId !== undefined) {
+      conditions.push("t.project_id = ?");
+      params.push(filters.projectId);
+    }
+
+    // Priority filter
+    if (filters.priority !== undefined) {
+      conditions.push("t.priority = ?");
+      params.push(filters.priority);
+    }
+
+    // Completed filter
+    if (filters.completed !== undefined) {
+      conditions.push("t.completed = ?");
+      params.push(filters.completed ? 1 : 0);
+    }
+
+    // Due date range
+    if (filters.dueDateStart !== undefined) {
+      conditions.push("t.due_date >= ?");
+      params.push(filters.dueDateStart.toISOString());
+    }
+    if (filters.dueDateEnd !== undefined) {
+      conditions.push("t.due_date <= ?");
+      params.push(filters.dueDateEnd.toISOString());
+    }
+
+    // Has reminder
+    if (filters.hasReminder !== undefined) {
+      if (filters.hasReminder) {
+        conditions.push(
+          "EXISTS (SELECT 1 FROM reminders r WHERE r.task_id = t.id)",
+        );
+      } else {
+        conditions.push(
+          "NOT EXISTS (SELECT 1 FROM reminders r WHERE r.task_id = t.id)",
+        );
+      }
+    }
+
+    // Is recurring
+    if (filters.isRecurring !== undefined) {
+      if (filters.isRecurring) {
+        conditions.push("t.recurrence IS NOT NULL");
+      } else {
+        conditions.push("t.recurrence IS NULL");
+      }
+    }
+
+    // Parent filter (subtasks vs root tasks)
+    if (filters.parentId === null) {
+      conditions.push("t.parent_id IS NULL");
+    } else if (filters.parentId !== undefined) {
+      conditions.push("t.parent_id = ?");
+      params.push(filters.parentId);
+    }
+
+    // Labels filter
+    if (filters.labelIds && filters.labelIds.length > 0) {
+      const placeholders = filters.labelIds.map(() => "?").join(", ");
+      conditions.push(`EXISTS (
+        SELECT 1 FROM task_labels tl
+        WHERE tl.task_id = t.id AND tl.label_id IN (${placeholders})
+      )`);
+      params.push(...filters.labelIds);
+    }
+
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    let query = `
+      SELECT t.* FROM tasks t
+      ${whereClause}
+      ORDER BY t.completed ASC, t.priority ASC, t.due_date ASC, t.task_order ASC
+    `;
+
+    // Pagination
+    if (filters.limit !== undefined) {
+      query += ` LIMIT ?`;
+      params.push(filters.limit);
+    }
+    if (filters.offset !== undefined) {
+      query += ` OFFSET ?`;
+      params.push(filters.offset);
+    }
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      title: string;
+      description: string | null;
+      priority: number;
+      due_date: string | null;
+      due_time: string | null;
+      completed: number;
+      completed_at: string | null;
+      project_id: string | null;
+      parent_id: string | null;
+      task_order: number;
+      created_at: string;
+      updated_at: string;
+    }>(query, ...params);
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const labels = await this.getTaskLabels(row.id);
+        return {
+          id: row.id,
+          title: row.title,
+          description: row.description ?? undefined,
+          priority: row.priority as 1 | 2 | 3 | 4,
+          dueDate: row.due_date ? new Date(row.due_date) : undefined,
+          dueTime: row.due_time ?? undefined,
+          completed: row.completed === 1,
+          completedAt: row.completed_at
+            ? new Date(row.completed_at)
+            : undefined,
+          projectId: row.project_id ?? undefined,
+          parentId: row.parent_id ?? undefined,
+          labels,
+          order: row.task_order,
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at),
+        };
+      }),
+    );
+  }
+
+  // ==================== SETTINGS (Sprint 5) ====================
+
+  async getSetting(key: string): Promise<string | null> {
+    if (!this.db) await this.initDatabase();
+
+    const row = await this.db!.getFirstAsync<{ value: string }>(
+      "SELECT value FROM settings WHERE key = ?",
+      key,
+    );
+
+    return row?.value ?? null;
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    const now = new Date().toISOString();
+
+    await this.db!.runAsync(
+      `INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)`,
+      key,
+      value,
+      now,
+    );
+  }
+
+  async getAllSettings(): Promise<Record<string, string>> {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{ key: string; value: string }>(
+      "SELECT key, value FROM settings",
+    );
+
+    const settings: Record<string, string> = {};
+    for (const row of rows) {
+      settings[row.key] = row.value;
+    }
+
+    return settings;
+  }
+
+  async deleteSetting(key: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    await this.db!.runAsync("DELETE FROM settings WHERE key = ?", key);
   }
 }
 

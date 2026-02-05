@@ -9,3 +9,4 @@ export { FilterBuilder } from "./FilterBuilder";
 export { FilterList } from "./FilterList";
 export { ActivityHistory } from "./ActivityHistory";
 export { DurationPicker } from "./DurationPicker";
+export { SubtaskList } from "./SubtaskList";

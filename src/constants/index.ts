@@ -106,3 +106,19 @@ export const TYPOGRAPHY = {
     relaxed: 1.75,
   },
 } as const;
+
+// Preset colors for projects and labels
+export const PRESET_COLORS = [
+  "#d1453b",
+  "#eb8909",
+  "#f59e0b",
+  "#22c55e",
+  "#14b8a6",
+  "#06b6d4",
+  "#3b82f6",
+  "#6366f1",
+  "#8b5cf6",
+  "#a855f7",
+  "#ec4899",
+  "#6b7280",
+] as const;
