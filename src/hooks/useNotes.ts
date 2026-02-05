@@ -1,33 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { NoteListItem, NoteSortConfig } from '@/types/notes';
-
-// Моковые данные для MVP
-const MOCK_NOTES: NoteListItem[] = [
-  {
-    id: '1',
-    title: 'Добро пожаловать в LISTED',
-    preview: 'Это ваша первая заметка. Нажмите, чтобы отредактировать...',
-    icon: '👋',
-    updatedAt: new Date(),
-    hasChildren: false,
-  },
-  {
-    id: '2',
-    title: 'Идеи для проекта',
-    preview: 'Список идей и планов на будущее...',
-    icon: '💡',
-    updatedAt: new Date(Date.now() - 86400000),
-    hasChildren: true,
-  },
-  {
-    id: '3',
-    title: 'Заметки с встречи',
-    preview: 'Обсудили основные пункты по проекту...',
-    icon: '📝',
-    updatedAt: new Date(Date.now() - 172800000),
-    hasChildren: false,
-  },
-];
+import { useState, useCallback, useEffect } from "react";
+import { databaseService } from "@/services/database";
+import type { NoteListItem, NoteSortConfig } from "@/types/notes";
+import type { Page } from "@/types";
 
 interface UseNotesResult {
   notes: NoteListItem[];
@@ -38,7 +12,17 @@ interface UseNotesResult {
   refresh: () => Promise<void>;
   setSortConfig: (config: NoteSortConfig) => void;
   deleteNote: (id: string) => Promise<void>;
+  createNote: (title?: string) => Promise<Page>;
 }
+
+const pageToNoteListItem = (page: Page): NoteListItem => ({
+  id: page.id,
+  title: page.title || "Без названия",
+  preview: "", // TODO: загружать первый блок как preview
+  icon: page.icon,
+  updatedAt: page.updatedAt,
+  hasChildren: false, // TODO: проверять наличие дочерних страниц
+});
 
 export const useNotes = (): UseNotesResult => {
   const [notes, setNotes] = useState<NoteListItem[]>([]);
@@ -46,9 +30,10 @@ export const useNotes = (): UseNotesResult => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<NoteSortConfig>({
-    field: 'updatedAt',
-    direction: 'desc',
+    field: "updatedAt",
+    direction: "desc",
   });
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
 
   const sortNotes = useCallback(
     (notesToSort: NoteListItem[]): NoteListItem[] => {
@@ -56,30 +41,44 @@ export const useNotes = (): UseNotesResult => {
         let comparison = 0;
 
         switch (sortConfig.field) {
-          case 'title':
-            comparison = a.title.localeCompare(b.title, 'ru');
+          case "title":
+            comparison = a.title.localeCompare(b.title, "ru");
             break;
-          case 'updatedAt':
-          case 'createdAt':
+          case "updatedAt":
+          case "createdAt":
             comparison = a.updatedAt.getTime() - b.updatedAt.getTime();
             break;
         }
 
-        return sortConfig.direction === 'asc' ? comparison : -comparison;
+        return sortConfig.direction === "asc" ? comparison : -comparison;
       });
     },
-    [sortConfig]
+    [sortConfig],
   );
 
   const loadNotes = useCallback(async () => {
     try {
       setError(null);
-      // TODO: Заменить на реальную загрузку из SQLite
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setNotes(sortNotes(MOCK_NOTES));
+
+      // Инициализируем БД и получаем workspace
+      await databaseService.initDatabase();
+      const workspaces = await databaseService.getWorkspaces();
+      const ws = workspaces[0];
+
+      if (!ws) {
+        setNotes([]);
+        return;
+      }
+
+      setWorkspaceId(ws.id);
+
+      // Загружаем страницы
+      const pages = await databaseService.getPages(ws.id);
+      const noteItems = pages.map(pageToNoteListItem);
+      setNotes(sortNotes(noteItems));
     } catch (err) {
-      setError('Не удалось загрузить заметки');
-      console.error('Error loading notes:', err);
+      setError("Не удалось загрузить заметки");
+      console.error("Error loading notes:", err);
     } finally {
       setIsLoading(false);
     }
@@ -93,13 +92,32 @@ export const useNotes = (): UseNotesResult => {
 
   const deleteNote = useCallback(async (id: string) => {
     try {
-      // TODO: Реализовать удаление из SQLite
+      await databaseService.deletePage(id);
       setNotes((prev) => prev.filter((note) => note.id !== id));
     } catch (err) {
-      setError('Не удалось удалить заметку');
-      console.error('Error deleting note:', err);
+      setError("Не удалось удалить заметку");
+      console.error("Error deleting note:", err);
     }
   }, []);
+
+  const createNote = useCallback(
+    async (title?: string): Promise<Page> => {
+      if (!workspaceId) {
+        throw new Error("Workspace not initialized");
+      }
+
+      const newPage = await databaseService.createPage({
+        title: title || "Новая заметка",
+        workspaceId,
+      });
+
+      // Добавляем в список
+      setNotes((prev) => [pageToNoteListItem(newPage), ...prev]);
+
+      return newPage;
+    },
+    [workspaceId],
+  );
 
   useEffect(() => {
     loadNotes();
@@ -118,5 +136,6 @@ export const useNotes = (): UseNotesResult => {
     refresh,
     setSortConfig,
     deleteNote,
+    createNote,
   };
 };
