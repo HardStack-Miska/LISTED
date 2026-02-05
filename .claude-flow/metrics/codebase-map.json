@@ -1,56 +1,11 @@
 {
-  "timestamp": "2026-02-06T00:45:00.000Z",
+  "timestamp": "2026-02-05T21:53:26.041Z",
   "projectRoot": "C:\\Users\\Honor\\Documents\\LISTED",
-  "projectName": "LISTED",
-  "description": "Task management mobile app (React Native + Expo)",
   "structure": {
     "hasPackageJson": true,
     "hasTsConfig": true,
     "hasClaudeConfig": true,
     "hasClaudeFlow": true
   },
-  "stats": {
-    "sourceFiles": 107,
-    "testFiles": 12,
-    "totalTests": 135
-  },
-  "architecture": {
-    "framework": "React Native (Expo)",
-    "router": "Expo Router",
-    "database": "SQLite (expo-sqlite)",
-    "stateManagement": "React Context",
-    "styling": "StyleSheet"
-  },
-  "screens": [
-    "Today - задачи на сегодня",
-    "Tasks - все задачи с фильтрами",
-    "Calendar - календарный вид",
-    "Settings - настройки приложения",
-    "TaskDetail - редактирование задачи",
-    "Projects - управление проектами",
-    "Labels - управление метками"
-  ],
-  "features": [
-    "Задачи с приоритетами P1-P4",
-    "Проекты с цветами",
-    "Метки (теги)",
-    "Подзадачи",
-    "Календарь",
-    "Поиск и фильтрация",
-    "Сортировка (дата, приоритет, имя)",
-    "Пометка просроченных задач",
-    "Тёмная тема",
-    "Quick Add"
-  ],
-  "directories": {
-    "src/app": "Expo Router screens",
-    "src/components": "UI компоненты",
-    "src/contexts": "React Context providers",
-    "src/hooks": "Custom hooks",
-    "src/services": "Database и бизнес-логика",
-    "src/types": "TypeScript типы",
-    "src/constants": "Цвета, размеры, константы",
-    "src/__tests__": "Jest тесты"
-  },
-  "scannedAt": 1770339900000
+  "scannedAt": 1770328406041
 }

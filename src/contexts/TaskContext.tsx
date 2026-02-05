@@ -78,7 +78,8 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
     try {
       setError(null);
       await databaseService.initDatabase();
-      const loadedTasks = await databaseService.searchTasks({});
+      // Only load root tasks (not subtasks) - subtasks have parentId
+      const loadedTasks = await databaseService.searchTasks({ parentId: null });
       setAllTasks(sortTasks(loadedTasks));
     } catch (err) {
       setError("Не удалось загрузить задачи");
