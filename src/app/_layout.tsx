@@ -2,7 +2,12 @@ import React from "react";
 import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { ThemeProvider, useTheme, TaskProvider } from "@/contexts";
+import {
+  ThemeProvider,
+  useTheme,
+  TaskProvider,
+  AuthProvider,
+} from "@/contexts";
 
 function RootLayoutContent() {
   const { colors, isDark } = useTheme();
@@ -25,6 +30,7 @@ function RootLayoutContent() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen
           name="task/[id]"
           options={{
@@ -40,11 +46,13 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <TaskProvider>
-          <RootLayoutContent />
-        </TaskProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <TaskProvider>
+            <RootLayoutContent />
+          </TaskProvider>
+        </ThemeProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,5 +1,5 @@
 export const DATABASE_NAME = "listed.db";
-export const DATABASE_VERSION = 5;
+export const DATABASE_VERSION = 6;
 
 export const SCHEMA = {
   workspaces: `
@@ -229,10 +229,66 @@ export const MIGRATIONS_V5 = [
   END`,
 ];
 
+// Sprint 6: Cloud Sync Infrastructure
+export const SCHEMA_V6 = {
+  sync_queue: `
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      operation TEXT NOT NULL,
+      payload TEXT,
+      created_at TEXT NOT NULL,
+      attempts INTEGER DEFAULT 0,
+      last_error TEXT
+    )
+  `,
+  sync_mapping: `
+    CREATE TABLE IF NOT EXISTS sync_mapping (
+      local_id TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      remote_id TEXT,
+      version INTEGER DEFAULT 1,
+      synced_at TEXT,
+      PRIMARY KEY (local_id, entity_type)
+    )
+  `,
+};
+
+export const MIGRATIONS_V6 = [
+  // Add sync columns to tasks
+  "ALTER TABLE tasks ADD COLUMN sync_status TEXT DEFAULT 'pending'",
+  "ALTER TABLE tasks ADD COLUMN remote_id TEXT",
+  "ALTER TABLE tasks ADD COLUMN version INTEGER DEFAULT 1",
+  "ALTER TABLE tasks ADD COLUMN deleted_at TEXT",
+  // Add sync columns to projects
+  "ALTER TABLE projects ADD COLUMN sync_status TEXT DEFAULT 'pending'",
+  "ALTER TABLE projects ADD COLUMN remote_id TEXT",
+  "ALTER TABLE projects ADD COLUMN version INTEGER DEFAULT 1",
+  "ALTER TABLE projects ADD COLUMN deleted_at TEXT",
+  // Add sync columns to labels
+  "ALTER TABLE labels ADD COLUMN sync_status TEXT DEFAULT 'pending'",
+  "ALTER TABLE labels ADD COLUMN remote_id TEXT",
+  "ALTER TABLE labels ADD COLUMN version INTEGER DEFAULT 1",
+  "ALTER TABLE labels ADD COLUMN deleted_at TEXT",
+  // Sync queue table
+  SCHEMA_V6.sync_queue,
+  // Sync mapping table
+  SCHEMA_V6.sync_mapping,
+  // Indexes
+  "CREATE INDEX IF NOT EXISTS idx_tasks_sync ON tasks(sync_status)",
+  "CREATE INDEX IF NOT EXISTS idx_tasks_remote ON tasks(remote_id)",
+  "CREATE INDEX IF NOT EXISTS idx_projects_sync ON projects(sync_status)",
+  "CREATE INDEX IF NOT EXISTS idx_labels_sync ON labels(sync_status)",
+  "CREATE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue(entity_type, entity_id)",
+  "CREATE INDEX IF NOT EXISTS idx_sync_mapping_remote ON sync_mapping(remote_id)",
+];
+
 export const MIGRATIONS: Record<number, string[]> = {
   1: [SCHEMA.workspaces, SCHEMA.pages, SCHEMA.blocks, ...INDEXES],
   2: [SCHEMA_V2.tasks, SCHEMA_V2.labels, SCHEMA_V2.task_labels, ...INDEXES_V2],
   3: MIGRATIONS_V3,
   4: MIGRATIONS_V4,
   5: MIGRATIONS_V5,
+  6: MIGRATIONS_V6,
 };
