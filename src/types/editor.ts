@@ -2,6 +2,20 @@ import type { BlockType } from "./index";
 
 export type { BlockType } from "./index";
 
+// Inline text formatting types
+export type FormatType = "bold" | "italic" | "underline" | "code";
+
+export interface TextSpan {
+  start: number;
+  end: number;
+  type: FormatType;
+}
+
+export interface FormattedTextData {
+  text: string;
+  spans?: TextSpan[];
+}
+
 // Курсор и выделение
 export interface EditorSelection {
   blockId: string;

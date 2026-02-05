@@ -365,6 +365,85 @@ class DatabaseService {
       updatedAt: new Date(row.updated_at),
     }));
   }
+
+  // US-009: Nested Pages Methods
+
+  async getChildPages(parentId: string): Promise<Page[]> {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      title: string;
+      icon: string | null;
+      parent_id: string | null;
+      workspace_id: string;
+      created_at: string;
+      updated_at: string;
+    }>(
+      "SELECT * FROM pages WHERE parent_id = ? ORDER BY updated_at DESC",
+      parentId,
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      icon: row.icon ?? undefined,
+      parentId: row.parent_id ?? undefined,
+      workspaceId: row.workspace_id,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    }));
+  }
+
+  async getPageWithAncestors(pageId: string): Promise<Page[]> {
+    if (!this.db) await this.initDatabase();
+
+    const ancestors: Page[] = [];
+    let currentId: string | undefined = pageId;
+
+    while (currentId) {
+      const page = await this.getPage(currentId);
+      if (!page) break;
+
+      ancestors.unshift(page);
+      currentId = page.parentId;
+    }
+
+    return ancestors;
+  }
+
+  async updatePageParent(pageId: string, newParentId?: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    await this.db!.runAsync(
+      "UPDATE pages SET parent_id = ?, updated_at = ? WHERE id = ?",
+      newParentId ?? null,
+      new Date().toISOString(),
+      pageId,
+    );
+  }
+
+  async validateParentChange(
+    pageId: string,
+    newParentId: string,
+  ): Promise<boolean> {
+    if (!this.db) await this.initDatabase();
+
+    // Check if newParentId is a descendant of pageId
+    // If it is, moving pageId under newParentId would create a cycle
+    let currentId: string | undefined = newParentId;
+
+    while (currentId) {
+      if (currentId === pageId) {
+        return false; // Would create a cycle
+      }
+      const page = await this.getPage(currentId);
+      if (!page) break;
+      currentId = page.parentId;
+    }
+
+    return true;
+  }
 }
 
 export const databaseService = DatabaseService.getInstance();
