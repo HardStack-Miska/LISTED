@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
-import { useTasks } from "@/hooks/useTasks";
+import { useTaskContext } from "@/contexts";
 import { useLabels } from "@/hooks/useLabels";
 import { useProjects } from "@/hooks/useProjects";
 import { TaskItem, QuickAddTask } from "@/components/tasks";
@@ -24,10 +24,20 @@ interface DeleteDialogState {
 
 export default function TodayScreen() {
   const router = useRouter();
-  const { tasks, isLoading, refresh, toggleComplete, deleteTask, createTask } =
-    useTasks("today");
+  const {
+    allTasks,
+    isLoading,
+    refresh,
+    toggleComplete,
+    deleteTask,
+    createTask,
+    getTodayTasks,
+  } = useTaskContext();
   const { labels } = useLabels();
   const { projects } = useProjects();
+
+  // Get today's tasks from context
+  const tasks = getTodayTasks();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
@@ -120,9 +130,16 @@ export default function TodayScreen() {
         onPress={handleTaskPress}
         onLongPress={handleTaskLongPress}
         allLabels={labels}
+        projects={projects}
       />
     ),
-    [handleToggleComplete, handleTaskPress, handleTaskLongPress, labels],
+    [
+      handleToggleComplete,
+      handleTaskPress,
+      handleTaskLongPress,
+      labels,
+      projects,
+    ],
   );
 
   const renderSectionHeader = (
@@ -179,6 +196,7 @@ export default function TodayScreen() {
                       onPress={handleTaskPress}
                       onLongPress={handleTaskLongPress}
                       allLabels={labels}
+                      projects={projects}
                     />
                   ))}
                 </>
@@ -195,6 +213,7 @@ export default function TodayScreen() {
                       onPress={handleTaskPress}
                       onLongPress={handleTaskLongPress}
                       allLabels={labels}
+                      projects={projects}
                     />
                   ))}
                 </>
@@ -211,6 +230,7 @@ export default function TodayScreen() {
                       onPress={handleTaskPress}
                       onLongPress={handleTaskLongPress}
                       allLabels={labels}
+                      projects={projects}
                     />
                   ))}
                 </>

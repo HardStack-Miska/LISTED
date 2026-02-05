@@ -2,13 +2,13 @@ import React, { useState, useCallback, useEffect } from "react";
 import { StyleSheet, View, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { BlockEditor, PageHeader } from "@/components/editor";
-import { useNotes } from "@/hooks/useNotes";
+import { useNoteContext } from "@/contexts";
 import { COLORS } from "@/constants";
 import type { EditorBlock } from "@/types/editor";
 
 export default function NewNoteScreen() {
   const router = useRouter();
-  const { createNote } = useNotes();
+  const { createNote } = useNoteContext();
 
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState("📝");

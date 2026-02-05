@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
-import type { Task, Priority, Label } from "@/types/task";
+import type { Task, Priority, Label, Project } from "@/types/task";
 import { PRIORITY_COLORS } from "@/types/task";
 
 interface TaskItemProps {
@@ -11,6 +11,7 @@ interface TaskItemProps {
   onPress: (id: string) => void;
   onLongPress?: (id: string) => void;
   allLabels?: Label[];
+  projects?: Project[];
 }
 
 const formatDueDate = (date: Date): string => {
@@ -49,6 +50,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   onPress,
   onLongPress,
   allLabels = [],
+  projects = [],
 }) => {
   const handleToggle = useCallback(() => {
     onToggleComplete(task.id);
@@ -61,6 +63,12 @@ export const TaskItem: React.FC<TaskItemProps> = ({
       .map((labelId) => allLabels.find((l) => l.id === labelId))
       .filter((l): l is Label => l !== undefined);
   }, [task.labels, allLabels]);
+
+  // Get project for display
+  const taskProject = useMemo(() => {
+    if (!task.projectId || !projects.length) return null;
+    return projects.find((p) => p.id === task.projectId) || null;
+  }, [task.projectId, projects]);
 
   const handlePress = useCallback(() => {
     onPress(task.id);
@@ -118,6 +126,20 @@ export const TaskItem: React.FC<TaskItemProps> = ({
                 >
                   {formatDueDate(task.dueDate)}
                   {task.dueTime && ` ${task.dueTime}`}
+                </Text>
+              </View>
+            )}
+
+            {taskProject && (
+              <View style={styles.projectContainer}>
+                <View
+                  style={[
+                    styles.projectDot,
+                    { backgroundColor: taskProject.color },
+                  ]}
+                />
+                <Text style={styles.projectName} numberOfLines={1}>
+                  {taskProject.name}
                 </Text>
               </View>
             )}
@@ -219,6 +241,21 @@ const styles = StyleSheet.create({
   },
   dueDate: {
     fontSize: FONT_SIZES.xs,
+  },
+  projectContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  projectDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  projectName: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    maxWidth: 100,
   },
   labelsContainer: {
     flexDirection: "row",

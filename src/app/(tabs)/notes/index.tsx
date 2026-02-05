@@ -5,7 +5,7 @@ import { NoteList } from "@/components/ui/NoteList";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { useNotes } from "@/hooks/useNotes";
+import { useNoteContext } from "@/contexts";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
 import type { NoteListItem } from "@/types/notes";
 
@@ -25,7 +25,7 @@ export default function NotesScreen() {
     searchQuery,
     setSearchQuery,
     isSearching,
-  } = useNotes();
+  } = useNoteContext();
 
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
     visible: false,

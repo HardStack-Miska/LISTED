@@ -7,16 +7,16 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
-import { useTasks } from "@/hooks/useTasks";
+import { useTaskContext } from "@/contexts";
 import { useProjects, useLabels } from "@/hooks";
 import { TaskItem } from "@/components/tasks/TaskItem";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Task, Project, Label, Priority } from "@/types";
 
 type FilterType = "all" | "upcoming" | "project" | "label";
@@ -31,8 +31,13 @@ interface FilterChip {
 
 export default function TasksScreen() {
   const router = useRouter();
-  const { tasks, isLoading, toggleTask, deleteTask, createTask } =
-    useTasks("all");
+  const {
+    allTasks: tasks,
+    isLoading,
+    toggleTask,
+    deleteTask,
+    createTask,
+  } = useTaskContext();
   const { projects } = useProjects();
   const { labels } = useLabels();
 
@@ -42,6 +47,13 @@ export default function TasksScreen() {
   );
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    visible: boolean;
+    task: Task | null;
+  }>({
+    visible: false,
+    task: null,
+  });
 
   // Build filter chips
   const filterChips: FilterChip[] = useMemo(() => {
@@ -150,16 +162,9 @@ export default function TasksScreen() {
       const task = tasks.find((t) => t.id === id);
       if (!task) return;
 
-      Alert.alert(task.title, "Выберите действие", [
-        { text: "Отмена", style: "cancel" },
-        {
-          text: "Удалить",
-          style: "destructive",
-          onPress: () => deleteTask(id),
-        },
-      ]);
+      setDeleteDialog({ visible: true, task });
     },
-    [tasks, deleteTask],
+    [tasks],
   );
 
   const handleQuickAdd = useCallback(
@@ -189,9 +194,10 @@ export default function TasksScreen() {
         onToggleComplete={toggleTask}
         onLongPress={handleTaskLongPress}
         allLabels={labels}
+        projects={projects}
       />
     ),
-    [handleTaskPress, toggleTask, handleTaskLongPress, labels],
+    [handleTaskPress, toggleTask, handleTaskLongPress, labels, projects],
   );
 
   const getFilterTitle = () => {
@@ -307,6 +313,7 @@ export default function TasksScreen() {
                   onToggleComplete={toggleTask}
                   onLongPress={handleTaskLongPress}
                   allLabels={labels}
+                  projects={projects}
                 />
               ))}
             </View>
@@ -323,6 +330,22 @@ export default function TasksScreen() {
       />
 
       <FloatingActionButton onPress={() => setShowQuickAdd(true)} />
+
+      <ConfirmDialog
+        visible={deleteDialog.visible}
+        title={`Удалить "${deleteDialog.task?.title ?? "задачу"}"?`}
+        message="Это действие нельзя отменить."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        confirmStyle="destructive"
+        onConfirm={() => {
+          if (deleteDialog.task) {
+            deleteTask(deleteDialog.task.id);
+          }
+          setDeleteDialog({ visible: false, task: null });
+        }}
+        onCancel={() => setDeleteDialog({ visible: false, task: null })}
+      />
     </View>
   );
 }

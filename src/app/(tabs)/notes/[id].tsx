@@ -4,11 +4,13 @@ import { useLocalSearchParams } from "expo-router";
 import { BlockEditor, PageHeader } from "@/components/editor";
 import { usePageData } from "@/hooks/usePageData";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { useNoteContext } from "@/contexts";
 import { COLORS, SPACING } from "@/constants";
 import type { EditorBlock } from "@/types/editor";
 
 export default function NoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { updateNote } = useNoteContext();
   const {
     page,
     blocks: initialBlocks,
@@ -37,8 +39,12 @@ export default function NoteDetailScreen() {
   const handleTitleChange = useCallback(
     (newTitle: string) => {
       updateTitle(newTitle);
+      // Синхронизируем с глобальным контекстом
+      if (id) {
+        updateNote(id, { title: newTitle });
+      }
     },
-    [updateTitle],
+    [updateTitle, id, updateNote],
   );
 
   const handleIconPress = useCallback(() => {
@@ -46,8 +52,13 @@ export default function NoteDetailScreen() {
     const currentIcon = page?.icon || "📝";
     const currentIndex = icons.indexOf(currentIcon);
     const nextIndex = (currentIndex + 1) % icons.length;
-    updateIcon(icons[nextIndex] ?? "📝");
-  }, [page?.icon, updateIcon]);
+    const newIcon = icons[nextIndex] ?? "📝";
+    updateIcon(newIcon);
+    // Синхронизируем с глобальным контекстом
+    if (id) {
+      updateNote(id, { icon: newIcon });
+    }
+  }, [page?.icon, updateIcon, id, updateNote]);
 
   const handleBlocksChange = useCallback((blocks: EditorBlock[]) => {
     setLocalBlocks(blocks);

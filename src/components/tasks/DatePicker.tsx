@@ -12,20 +12,23 @@ interface QuickDateOption {
   key: string;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
-  getDate: () => Date;
+  color: string;
+  getDate: () => Date | null;
 }
 
 const QUICK_OPTIONS: QuickDateOption[] = [
   {
     key: "today",
     label: "Сегодня",
-    icon: "today-outline",
+    icon: "today",
+    color: "#058527", // green
     getDate: () => new Date(),
   },
   {
     key: "tomorrow",
     label: "Завтра",
-    icon: "sunny-outline",
+    icon: "sunny",
+    color: "#ff9900", // orange
     getDate: () => {
       const date = new Date();
       date.setDate(date.getDate() + 1);
@@ -35,12 +38,23 @@ const QUICK_OPTIONS: QuickDateOption[] = [
   {
     key: "nextWeek",
     label: "След. неделя",
-    icon: "calendar-outline",
+    icon: "calendar",
+    color: "#246fe0", // blue
     getDate: () => {
       const date = new Date();
-      date.setDate(date.getDate() + 7);
+      // Go to next Monday
+      const day = date.getDay();
+      const daysUntilMonday = day === 0 ? 1 : 8 - day;
+      date.setDate(date.getDate() + daysUntilMonday);
       return date;
     },
+  },
+  {
+    key: "noDate",
+    label: "Без даты",
+    icon: "close-circle",
+    color: "#808080", // gray
+    getDate: () => null,
   },
 ];
 
@@ -70,9 +84,20 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
 
   const handleQuickSelect = useCallback(
     (option: QuickDateOption) => {
-      onChange(option.getDate());
+      const date = option.getDate();
+      onChange(date);
     },
     [onChange],
+  );
+
+  const isQuickOptionActive = useCallback(
+    (option: QuickDateOption) => {
+      const optionDate = option.getDate();
+      if (optionDate === null) return value === null;
+      if (value === null) return false;
+      return value.toDateString() === optionDate.toDateString();
+    },
+    [value],
   );
 
   const handleClearDate = useCallback(() => {
@@ -259,23 +284,38 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
       </View>
 
       <View style={styles.quickOptions}>
-        {QUICK_OPTIONS.map((option) => (
-          <Pressable
-            key={option.key}
-            style={({ pressed }) => [
-              styles.quickButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={() => handleQuickSelect(option)}
-          >
-            <Ionicons
-              name={option.icon}
-              size={18}
-              color={COLORS.textSecondary}
-            />
-            <Text style={styles.quickButtonText}>{option.label}</Text>
-          </Pressable>
-        ))}
+        {QUICK_OPTIONS.map((option) => {
+          const isActive = isQuickOptionActive(option);
+          return (
+            <Pressable
+              key={option.key}
+              style={({ pressed }) => [
+                styles.quickButton,
+                isActive && styles.quickButtonActive,
+                isActive && {
+                  borderColor: option.color,
+                  backgroundColor: option.color + "15",
+                },
+                pressed && styles.pressed,
+              ]}
+              onPress={() => handleQuickSelect(option)}
+            >
+              <Ionicons
+                name={option.icon}
+                size={18}
+                color={isActive ? option.color : option.color}
+              />
+              <Text
+                style={[
+                  styles.quickButtonText,
+                  isActive && { color: option.color, fontWeight: "600" },
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
         <Pressable
           style={({ pressed }) => [
             styles.quickButton,
@@ -286,9 +326,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
           <Ionicons
             name="calendar-number-outline"
             size={18}
-            color={COLORS.textSecondary}
+            color={COLORS.primary}
           />
-          <Text style={styles.quickButtonText}>Выбрать</Text>
+          <Text style={[styles.quickButtonText, { color: COLORS.primary }]}>
+            Календарь
+          </Text>
         </Pressable>
       </View>
 
@@ -335,6 +377,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     gap: SPACING.xs,
+  },
+  quickButtonActive: {
+    borderWidth: 2,
   },
   pressed: {
     opacity: 0.7,

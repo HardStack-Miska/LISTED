@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,16 +10,20 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, PRESET_COLORS } from "@/constants";
 import { useProjects } from "@/hooks";
+import { useTaskContext } from "@/contexts";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Project } from "@/types";
 
 export default function ProjectsScreen() {
+  const router = useRouter();
   const { projects, isLoading, createProject, updateProject, deleteProject } =
     useProjects();
+  const { allTasks } = useTaskContext();
 
   const [showEditor, setShowEditor] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -27,6 +31,27 @@ export default function ProjectsScreen() {
   const [color, setColor] = useState<string>(PRESET_COLORS[0]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+
+  // Count tasks per project
+  const projectTaskCounts = useMemo(() => {
+    const counts: Record<string, { active: number; total: number }> = {};
+    allTasks.forEach((task) => {
+      if (task.projectId) {
+        const projectId = task.projectId;
+        if (!counts[projectId]) {
+          counts[projectId] = { active: 0, total: 0 };
+        }
+        const projectCounts = counts[projectId];
+        if (projectCounts) {
+          projectCounts.total++;
+          if (!task.completed) {
+            projectCounts.active++;
+          }
+        }
+      }
+    });
+    return counts;
+  }, [allTasks]);
 
   const handleCreate = useCallback(() => {
     setEditingProject(null);
@@ -82,38 +107,40 @@ export default function ProjectsScreen() {
 
   const handleProjectPress = useCallback(
     (project: Project) => {
-      // Open editor for the project
-      handleEdit(project);
+      // Navigate to project detail screen
+      router.push(`/projects/${project.id}`);
     },
-    [handleEdit],
+    [router],
   );
 
   const renderProject = useCallback(
-    ({ item }: { item: Project }) => (
-      <TouchableOpacity
-        style={styles.projectItem}
-        onPress={() => handleProjectPress(item)}
-        onLongPress={() => handleEdit(item)}
-      >
-        <View
-          style={[styles.colorIndicator, { backgroundColor: item.color }]}
-        />
-        <View style={styles.projectInfo}>
-          <Text style={styles.projectName}>{item.name}</Text>
-        </View>
+    ({ item }: { item: Project }) => {
+      const counts = projectTaskCounts[item.id] || { active: 0, total: 0 };
+      return (
         <TouchableOpacity
-          style={styles.moreButton}
-          onPress={() => handleEdit(item)}
+          style={styles.projectItem}
+          onPress={() => handleProjectPress(item)}
+          onLongPress={() => handleEdit(item)}
         >
-          <Ionicons
-            name="ellipsis-horizontal"
-            size={20}
-            color={COLORS.textSecondary}
+          <View
+            style={[styles.colorIndicator, { backgroundColor: item.color }]}
           />
+          <View style={styles.projectInfo}>
+            <Text style={styles.projectName}>{item.name}</Text>
+            <Text style={styles.taskCount}>
+              {counts.active} активных / {counts.total} всего
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => handleEdit(item)}
+          >
+            <Ionicons name="pencil" size={18} color={COLORS.textSecondary} />
+          </TouchableOpacity>
         </TouchableOpacity>
-      </TouchableOpacity>
-    ),
-    [handleProjectPress, handleEdit],
+      );
+    },
+    [handleProjectPress, handleEdit, projectTaskCounts],
   );
 
   if (isLoading) {
@@ -296,7 +323,12 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: COLORS.text,
   },
-  moreButton: {
+  taskCount: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  editButton: {
     padding: SPACING.sm,
   },
   emptyContainer: {
