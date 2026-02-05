@@ -1,2 +1,4 @@
-// UI Components exports
-// Add component exports here as they are created
+export { NoteCard } from "./NoteCard";
+export { EmptyState } from "./EmptyState";
+export { FloatingActionButton } from "./FloatingActionButton";
+export { NoteList } from "./NoteList";
