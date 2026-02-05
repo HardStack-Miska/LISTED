@@ -21,7 +21,7 @@ class ActivityService {
   log(
     type: ActivityType,
     task?: Partial<Task>,
-    details?: Record<string, unknown>
+    details?: Record<string, unknown>,
   ): ActivityLogEntry {
     const entry: ActivityLogEntry = {
       id: this.generateId(),
@@ -59,7 +59,7 @@ class ActivityService {
 
   logTaskUpdated(
     task: Task,
-    changes: Record<string, { old: unknown; new: unknown }>
+    changes: Record<string, { old: unknown; new: unknown }>,
   ): ActivityLogEntry {
     return this.log("task_updated", task, { changes });
   }
@@ -68,7 +68,11 @@ class ActivityService {
     return this.log("task_deleted", task);
   }
 
-  logTaskMoved(task: Task, fromProject?: string, toProject?: string): ActivityLogEntry {
+  logTaskMoved(
+    task: Task,
+    fromProject?: string,
+    toProject?: string,
+  ): ActivityLogEntry {
     return this.log("task_moved", task, { fromProject, toProject });
   }
 
@@ -97,7 +101,7 @@ class ActivityService {
 
   getByDateRange(start: Date, end: Date): ActivityLogEntry[] {
     return this.activities.filter(
-      (a) => a.timestamp >= start && a.timestamp <= end
+      (a) => a.timestamp >= start && a.timestamp <= end,
     );
   }
 
@@ -123,7 +127,7 @@ class ActivityService {
     let entries = this.getByType("task_completed");
     if (start && end) {
       entries = entries.filter(
-        (a) => a.timestamp >= start && a.timestamp <= end
+        (a) => a.timestamp >= start && a.timestamp <= end,
       );
     }
     return entries.length;
@@ -138,15 +142,16 @@ class ActivityService {
     dailyStats: Array<{ date: string; completed: number; created: number }>;
   } {
     const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    startDate.setDate(startDate.getDate() - (days - 1));
     startDate.setHours(0, 0, 0, 0);
 
     const rangeEntries = this.getByDateRange(startDate, endDate);
     const completed = rangeEntries.filter((a) => a.type === "task_completed");
     const created = rangeEntries.filter((a) => a.type === "task_created");
 
-    // Daily breakdown
+    // Daily breakdown - days includes today
     const dailyStats: Map<string, { completed: number; created: number }> =
       new Map();
     for (let i = 0; i < days; i++) {
@@ -186,7 +191,7 @@ class ActivityService {
       ([date, stat]) => ({
         date,
         ...stat,
-      })
+      }),
     );
 
     return {

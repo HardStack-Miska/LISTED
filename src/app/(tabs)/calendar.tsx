@@ -4,26 +4,27 @@ import { useRouter } from "expo-router";
 import { COLORS } from "@/constants";
 import { useTasks } from "@/hooks/useTasks";
 import { CalendarView } from "@/components/tasks";
+import type { Task } from "@/types";
 
 export default function CalendarScreen() {
   const router = useRouter();
   const { tasks } = useTasks("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  const handleDayPress = useCallback((date: Date) => {
+  const handleSelectDate = useCallback((date: Date) => {
     setSelectedDate(date);
   }, []);
 
-  const handleTaskPress = useCallback((taskId: string) => {
+  const handleTaskPress = useCallback((task: Task) => {
     // TODO: Navigate to task details
-    console.log("Task pressed:", taskId);
+    console.log("Task pressed:", task.id);
   }, []);
 
   return (
     <View style={styles.container}>
       <CalendarView
         tasks={tasks}
-        onDayPress={handleDayPress}
+        onSelectDate={handleSelectDate}
         onTaskPress={handleTaskPress}
         selectedDate={selectedDate}
       />

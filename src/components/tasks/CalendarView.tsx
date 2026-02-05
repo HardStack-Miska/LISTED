@@ -1,27 +1,32 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, FONT_SIZES } from '@/constants';
-import type { Task } from '@/types';
-import { PRIORITY_COLORS } from '@/types/task';
+import React, { useState, useCallback, useMemo } from "react";
+import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS, SPACING, FONT_SIZES } from "@/constants";
+import type { Task } from "@/types";
+import { PRIORITY_COLORS } from "@/types/task";
 
 interface CalendarViewProps {
   tasks: Task[];
-  onDayPress: (date: Date) => void;
-  onTaskPress: (taskId: string) => void;
+  onSelectDate: (date: Date) => void;
+  onTaskPress?: (task: Task) => void;
   selectedDate?: Date;
+  testID?: string;
 }
 
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const MONTHS = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+  "Январь",
+  "Февраль",
+  "Март",
+  "Апрель",
+  "Май",
+  "Июнь",
+  "Июль",
+  "Август",
+  "Сентябрь",
+  "Октябрь",
+  "Ноябрь",
+  "Декабрь",
 ];
 
 const getMonthDays = (year: number, month: number): (number | null)[] => {
@@ -47,16 +52,19 @@ const getMonthDays = (year: number, month: number): (number | null)[] => {
 };
 
 const isSameDay = (d1: Date, d2: Date): boolean => {
-  return d1.getFullYear() === d2.getFullYear() &&
+  return (
+    d1.getFullYear() === d2.getFullYear() &&
     d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate();
+    d1.getDate() === d2.getDate()
+  );
 };
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   tasks,
-  onDayPress,
+  onSelectDate,
   onTaskPress,
   selectedDate,
+  testID,
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const today = useMemo(() => new Date(), []);
@@ -98,13 +106,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   const goToToday = useCallback(() => {
     setCurrentMonth(new Date());
-    onDayPress(new Date());
-  }, [onDayPress]);
+    onSelectDate(new Date());
+  }, [onSelectDate]);
 
-  const handleDayPress = useCallback((day: number) => {
-    const date = new Date(year, month, day);
-    onDayPress(date);
-  }, [year, month, onDayPress]);
+  const handleDayPress = useCallback(
+    (day: number) => {
+      const date = new Date(year, month, day);
+      onSelectDate(date);
+    },
+    [year, month, onSelectDate],
+  );
 
   const getTasksForDay = (day: number): Task[] => {
     const date = new Date(year, month, day);
@@ -112,16 +123,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const isToday = (day: number): boolean => {
-    return day === today.getDate() &&
+    return (
+      day === today.getDate() &&
       month === today.getMonth() &&
-      year === today.getFullYear();
+      year === today.getFullYear()
+    );
   };
 
   const isSelected = (day: number): boolean => {
     if (!selectedDate) return false;
-    return day === selectedDate.getDate() &&
+    return (
+      day === selectedDate.getDate() &&
       month === selectedDate.getMonth() &&
-      year === selectedDate.getFullYear();
+      year === selectedDate.getFullYear()
+    );
   };
 
   // Split days into weeks
@@ -131,10 +146,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID={testID}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={goToPreviousMonth} style={styles.navButton}>
+        <Pressable
+          onPress={goToPreviousMonth}
+          style={styles.navButton}
+          testID="prev-month"
+        >
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </Pressable>
 
@@ -144,7 +163,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </Text>
         </Pressable>
 
-        <Pressable onPress={goToNextMonth} style={styles.navButton}>
+        <Pressable
+          onPress={goToNextMonth}
+          style={styles.navButton}
+          testID="next-month"
+        >
           <Ionicons name="chevron-forward" size={24} color={COLORS.text} />
         </Pressable>
       </View>
@@ -152,7 +175,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       {/* Weekday headers */}
       <View style={styles.weekdays}>
         {WEEKDAYS.map((day) => (
-          <Text key={day} style={styles.weekdayText}>{day}</Text>
+          <Text key={day} style={styles.weekdayText}>
+            {day}
+          </Text>
         ))}
       </View>
 
@@ -167,7 +192,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
               const dayTasks = getTasksForDay(day);
               const hasOverdue = dayTasks.some(
-                (t) => !t.completed && t.dueDate && new Date(t.dueDate) < today
+                (t) => !t.completed && t.dueDate && new Date(t.dueDate) < today,
               );
               const completedCount = dayTasks.filter((t) => t.completed).length;
               const pendingCount = dayTasks.length - completedCount;
@@ -175,6 +200,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               return (
                 <Pressable
                   key={dayIndex}
+                  testID={`day-${day}`}
                   style={[
                     styles.day,
                     isToday(day) && styles.todayDay,
@@ -198,7 +224,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         <View
                           style={[
                             styles.taskDot,
-                            { backgroundColor: hasOverdue ? COLORS.error : COLORS.primary },
+                            {
+                              backgroundColor: hasOverdue
+                                ? COLORS.error
+                                : COLORS.primary,
+                            },
                           ]}
                         />
                       )}
@@ -231,7 +261,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <Pressable
                 key={task.id}
                 style={styles.taskItem}
-                onPress={() => onTaskPress(task.id)}
+                onPress={() => onTaskPress?.(task)}
               >
                 <View
                   style={[
@@ -270,9 +300,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
   },
@@ -284,11 +314,11 @@ const styles = StyleSheet.create({
   },
   monthTitle: {
     fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
   },
   weekdays: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: SPACING.sm,
     paddingBottom: SPACING.sm,
     borderBottomWidth: 1,
@@ -296,16 +326,16 @@ const styles = StyleSheet.create({
   },
   weekdayText: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: FONT_SIZES.xs,
-    fontWeight: '500',
+    fontWeight: "500",
     color: COLORS.textSecondary,
   },
   calendarGrid: {
     flex: 1,
   },
   week: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: SPACING.sm,
   },
   emptyDay: {
@@ -317,8 +347,8 @@ const styles = StyleSheet.create({
     flex: 1,
     aspectRatio: 1,
     margin: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 8,
   },
   todayDay: {
@@ -334,14 +364,14 @@ const styles = StyleSheet.create({
   },
   todayNumber: {
     color: COLORS.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   selectedNumber: {
     color: COLORS.white,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   taskIndicators: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 2,
     marginTop: 2,
   },
@@ -358,7 +388,7 @@ const styles = StyleSheet.create({
   },
   selectedDayTitle: {
     fontSize: FONT_SIZES.md,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: SPACING.sm,
   },
@@ -366,8 +396,8 @@ const styles = StyleSheet.create({
     maxHeight: 150,
   },
   taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: SPACING.sm,
     gap: SPACING.sm,
   },
@@ -376,8 +406,8 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   taskCheckboxCompleted: {
     backgroundColor: COLORS.textSecondary,
@@ -389,13 +419,13 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   taskTitleCompleted: {
-    textDecorationLine: 'line-through',
+    textDecorationLine: "line-through",
     color: COLORS.textSecondary,
   },
   noTasksText: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: SPACING.md,
   },
 });
