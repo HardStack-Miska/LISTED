@@ -37,3 +37,39 @@ jest.mock("react-native-safe-area-context", () => {
 jest.mock("expo-status-bar", () => ({
   StatusBar: "StatusBar",
 }));
+
+jest.mock("expo-font", () => ({
+  loadAsync: jest.fn(() => Promise.resolve()),
+  isLoaded: jest.fn(() => true),
+  isLoading: jest.fn(() => false),
+}));
+
+jest.mock("@expo/vector-icons", () => {
+  const React = require("react");
+  const { Text } = require("react-native");
+
+  const createIconMock = (name) => {
+    const IconMock = (props) =>
+      React.createElement(
+        Text,
+        { testID: `icon-${name}`, ...props },
+        props.name || name,
+      );
+    IconMock.displayName = name;
+    return IconMock;
+  };
+
+  return {
+    Ionicons: createIconMock("Ionicons"),
+    MaterialIcons: createIconMock("MaterialIcons"),
+    FontAwesome: createIconMock("FontAwesome"),
+    Feather: createIconMock("Feather"),
+  };
+});
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  setItem: jest.fn(() => Promise.resolve()),
+  getItem: jest.fn(() => Promise.resolve(null)),
+  removeItem: jest.fn(() => Promise.resolve()),
+  clear: jest.fn(() => Promise.resolve()),
+}));
