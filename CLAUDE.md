@@ -1,5 +1,44 @@
 # Claude Code Configuration - Claude Flow V3
 
+## Project: LISTED
+
+**LISTED** — мобильное приложение для управления задачами (React Native + Expo).
+
+### Технологии
+- **Framework:** React Native (Expo SDK 52)
+- **Router:** Expo Router
+- **Database:** SQLite (expo-sqlite)
+- **State:** React Context (TaskContext)
+- **Styling:** StyleSheet + константы
+
+### Структура экранов
+- `/(tabs)/today` — задачи на сегодня
+- `/(tabs)/tasks` — все задачи с фильтрами и сортировкой
+- `/(tabs)/calendar` — календарный вид
+- `/(tabs)/settings` — настройки
+- `/task/[id]` — редактирование задачи
+
+### Реализованные функции
+- Задачи с приоритетами P1-P4
+- Проекты с цветами
+- Метки (теги)
+- Подзадачи
+- Календарь
+- Поиск и фильтрация
+- Сортировка (дата → приоритет → имя)
+- Пометка просроченных задач
+- Тёмная тема
+- Quick Add
+
+### Команды
+```bash
+npm start          # Запуск Expo
+npm test           # Jest тесты
+npx tsc --noEmit   # TypeScript проверка
+```
+
+---
+
 ## Behavioral Rules (Always Enforced)
 
 - Do what has been asked; nothing more, nothing less
