@@ -46,12 +46,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="notes"
+        name="calendar"
         options={{
-          title: "Заметки",
+          title: "Календарь",
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size} color={color} />
+            <Ionicons name="calendar-outline" size={size} color={color} />
           ),
         }}
       />
@@ -73,7 +73,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="calendar"
+        name="notes"
         options={{
           href: null,
         }}
