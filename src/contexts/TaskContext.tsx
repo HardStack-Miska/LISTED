@@ -41,7 +41,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Sort tasks: by date (no date last), then by priority (1 highest), then by creation
+  // Sort tasks: by date -> priority -> name
   const sortTasks = useCallback((tasks: Task[]): Task[] => {
     return [...tasks].sort((a, b) => {
       // Completed tasks go to the end
@@ -61,8 +61,8 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
         return a.priority - b.priority;
       }
 
-      // Finally by creation date (newest first)
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      // Finally by name (alphabetical)
+      return a.title.localeCompare(b.title, "ru");
     });
   }, []);
 

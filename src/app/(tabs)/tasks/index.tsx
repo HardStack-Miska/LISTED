@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
@@ -278,14 +279,14 @@ export default function TasksScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer} edges={["top"]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>{getFilterTitle()}</Text>
@@ -466,7 +467,7 @@ export default function TasksScreen() {
         }}
         onCancel={() => setDeleteDialog({ visible: false, task: null })}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
