@@ -7,6 +7,7 @@ import {
   useTheme,
   TaskProvider,
   AuthProvider,
+  SyncProvider,
 } from "@/contexts";
 
 function RootLayoutContent() {
@@ -47,11 +48,13 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <ThemeProvider>
-          <TaskProvider>
-            <RootLayoutContent />
-          </TaskProvider>
-        </ThemeProvider>
+        <SyncProvider>
+          <ThemeProvider>
+            <TaskProvider>
+              <RootLayoutContent />
+            </TaskProvider>
+          </ThemeProvider>
+        </SyncProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

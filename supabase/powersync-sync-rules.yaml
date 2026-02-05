@@ -1,0 +1,37 @@
+# PowerSync Sync Rules for LISTED App
+# Deploy this in the PowerSync Dashboard
+
+bucket_definitions:
+  # User's tasks bucket
+  user_tasks:
+    # Each user gets their own bucket with their tasks
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM tasks WHERE owner_id = bucket.user_id
+
+  # User's projects bucket
+  user_projects:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM projects WHERE owner_id = bucket.user_id
+
+  # User's labels bucket
+  user_labels:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM labels WHERE owner_id = bucket.user_id
+
+  # User's task_labels bucket
+  user_task_labels:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT task_labels.*
+        FROM task_labels
+        JOIN tasks ON tasks.id = task_labels.task_id
+        WHERE tasks.owner_id = bucket.user_id
+
+  # User's reminders bucket
+  user_reminders:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM reminders WHERE owner_id = bucket.user_id

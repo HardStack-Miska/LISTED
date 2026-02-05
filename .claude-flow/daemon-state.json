@@ -3,31 +3,31 @@
   "startedAt": "2026-02-04T23:44:23.676Z",
   "workers": {
     "map": {
-      "runCount": 61,
-      "successCount": 61,
+      "runCount": 62,
+      "successCount": 62,
       "failureCount": 0,
-      "averageDurationMs": 1.360655737704918,
+      "averageDurationMs": 1.3548387096774193,
       "isRunning": false,
-      "nextRun": "2026-02-05T22:38:26.058Z",
-      "lastRun": "2026-02-05T22:23:26.058Z"
+      "nextRun": "2026-02-05T22:53:26.068Z",
+      "lastRun": "2026-02-05T22:38:26.067Z"
     },
     "audit": {
-      "runCount": 90,
-      "successCount": 90,
+      "runCount": 91,
+      "successCount": 91,
       "failureCount": 0,
-      "averageDurationMs": 87.3888888888889,
+      "averageDurationMs": 88.61538461538463,
       "isRunning": false,
-      "nextRun": "2026-02-05T22:23:27.369Z",
-      "lastRun": "2026-02-05T22:23:27.468Z"
+      "nextRun": "2026-02-05T22:43:27.669Z",
+      "lastRun": "2026-02-05T22:33:27.668Z"
     },
     "optimize": {
-      "runCount": 61,
-      "successCount": 61,
+      "runCount": 62,
+      "successCount": 62,
       "failureCount": 0,
-      "averageDurationMs": 12.655737704918034,
+      "averageDurationMs": 12.82258064516129,
       "isRunning": false,
       "nextRun": "2026-02-05T22:38:26.199Z",
-      "lastRun": "2026-02-05T22:23:26.198Z"
+      "lastRun": "2026-02-05T22:38:26.229Z"
     },
     "consolidate": {
       "runCount": 32,
@@ -39,13 +39,13 @@
       "lastRun": "2026-02-05T22:23:26.229Z"
     },
     "testgaps": {
-      "runCount": 46,
-      "successCount": 46,
+      "runCount": 47,
+      "successCount": 47,
       "failureCount": 0,
-      "averageDurationMs": 11.195652173913043,
+      "averageDurationMs": 11.51063829787234,
       "isRunning": false,
-      "nextRun": "2026-02-05T22:33:26.322Z",
-      "lastRun": "2026-02-05T22:13:26.322Z"
+      "nextRun": "2026-02-05T22:53:26.363Z",
+      "lastRun": "2026-02-05T22:33:26.362Z"
     },
     "predict": {
       "runCount": 0,
@@ -131,5 +131,5 @@
       }
     ]
   },
-  "savedAt": "2026-02-05T22:23:27.468Z"
+  "savedAt": "2026-02-05T22:38:26.229Z"
 }
