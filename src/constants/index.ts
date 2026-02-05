@@ -26,6 +26,7 @@ export const DATABASE = {
 // Todoist-style colors
 export const COLORS_LIGHT = {
   primary: "#dc4c3e", // Todoist red
+  primaryLight: "#fce4e2", // Light red for backgrounds
   secondary: "#808080",
   background: "#ffffff",
   surface: "#fafafa",
@@ -33,6 +34,7 @@ export const COLORS_LIGHT = {
   textSecondary: "#808080",
   border: "#f0f0f0",
   error: "#dc4c3e",
+  danger: "#f44336",
   success: "#058527",
   warning: "#ff9900",
   white: "#ffffff",
@@ -45,6 +47,7 @@ export const COLORS_LIGHT = {
 
 export const COLORS_DARK = {
   primary: "#dc4c3e",
+  primaryLight: "#3d2222", // Dark red for backgrounds
   secondary: "#a0a0a0",
   background: "#1f1f1f",
   surface: "#282828",
@@ -52,6 +55,7 @@ export const COLORS_DARK = {
   textSecondary: "#a0a0a0",
   border: "#333333",
   error: "#dc4c3e",
+  danger: "#f44336",
   success: "#058527",
   warning: "#ff9900",
   white: "#ffffff",

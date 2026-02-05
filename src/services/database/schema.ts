@@ -1,5 +1,5 @@
 export const DATABASE_NAME = "listed.db";
-export const DATABASE_VERSION = 3;
+export const DATABASE_VERSION = 4;
 
 export const SCHEMA = {
   workspaces: `
@@ -125,8 +125,66 @@ export const MIGRATIONS_V3 = [
   "CREATE INDEX IF NOT EXISTS idx_tasks_source_page ON tasks(source_page_id)",
 ];
 
+// Sprint 4.2: Premium features (free in LISTED)
+export const SCHEMA_V4 = {
+  reminders: `
+    CREATE TABLE IF NOT EXISTS reminders (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      reminder_time TEXT NOT NULL,
+      reminder_type TEXT NOT NULL DEFAULT 'absolute',
+      relative_minutes INTEGER,
+      notification_id TEXT,
+      triggered INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+    )
+  `,
+  filters: `
+    CREATE TABLE IF NOT EXISTS filters (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      icon TEXT,
+      color TEXT,
+      query TEXT NOT NULL,
+      filter_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `,
+  activity_log: `
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id TEXT PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      old_value TEXT,
+      new_value TEXT,
+      created_at TEXT NOT NULL
+    )
+  `,
+};
+
+export const MIGRATIONS_V4 = [
+  // Add duration and recurrence to tasks
+  "ALTER TABLE tasks ADD COLUMN duration INTEGER",
+  "ALTER TABLE tasks ADD COLUMN recurrence TEXT",
+  // Reminders table
+  SCHEMA_V4.reminders,
+  // Custom filters table
+  SCHEMA_V4.filters,
+  // Activity log for history
+  SCHEMA_V4.activity_log,
+  // Indexes
+  "CREATE INDEX IF NOT EXISTS idx_reminders_task ON reminders(task_id)",
+  "CREATE INDEX IF NOT EXISTS idx_reminders_time ON reminders(reminder_time)",
+  "CREATE INDEX IF NOT EXISTS idx_activity_entity ON activity_log(entity_type, entity_id)",
+  "CREATE INDEX IF NOT EXISTS idx_activity_time ON activity_log(created_at DESC)",
+];
+
 export const MIGRATIONS: Record<number, string[]> = {
   1: [SCHEMA.workspaces, SCHEMA.pages, SCHEMA.blocks, ...INDEXES],
   2: [SCHEMA_V2.tasks, SCHEMA_V2.labels, SCHEMA_V2.task_labels, ...INDEXES_V2],
   3: MIGRATIONS_V3,
+  4: MIGRATIONS_V4,
 };
