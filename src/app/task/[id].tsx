@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import {
   View,
   Text,
@@ -50,9 +56,9 @@ export default function TaskDetailScreen() {
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
 
-  // Autosave refs
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Track if there are unsaved changes
   const isInitialLoadRef = useRef(true);
+  const hasChangesRef = useRef(false);
 
   useEffect(() => {
     const loadTask = async () => {
@@ -87,9 +93,9 @@ export default function TaskDetailScreen() {
     loadTask();
   }, [id]);
 
-  // Autosave function - uses context updateTask for global sync
+  // Save function - uses context updateTask for global sync
   const performSave = useCallback(async () => {
-    if (!id || !title.trim() || isInitialLoadRef.current) return;
+    if (!id || !title.trim() || !hasChangesRef.current) return;
 
     setIsSaving(true);
     try {
@@ -118,6 +124,7 @@ export default function TaskDetailScreen() {
 
       // Update local task state
       setTask((prev) => (prev ? { ...prev, labels: selectedLabelIds } : null));
+      hasChangesRef.current = false;
     } catch (error) {
       console.error("Error saving task:", error);
     } finally {
@@ -137,32 +144,19 @@ export default function TaskDetailScreen() {
     removeLabelFromTask,
   ]);
 
-  // Debounced autosave effect
+  // Track changes after initial load
   useEffect(() => {
     if (isInitialLoadRef.current) return;
+    hasChangesRef.current = true;
+  }, [title, description, priority, dueDate, projectId, selectedLabelIds]);
 
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+  // Handle back navigation - save before leaving
+  const handleBack = useCallback(async () => {
+    if (hasChangesRef.current) {
+      await performSave();
     }
-
-    saveTimeoutRef.current = setTimeout(() => {
-      performSave();
-    }, 800);
-
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [
-    title,
-    description,
-    priority,
-    dueDate,
-    projectId,
-    selectedLabelIds,
-    performSave,
-  ]);
+    router.back();
+  }, [performSave, router]);
 
   const handleDelete = useCallback(async () => {
     if (!id) return;
@@ -256,10 +250,7 @@ export default function TaskDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.headerButton}
-        >
+        <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         {isSaving && (

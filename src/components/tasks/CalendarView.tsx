@@ -1,9 +1,21 @@
 import React, { useState, useCallback, useMemo } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
 import type { Task } from "@/types";
 import { PRIORITY_COLORS } from "@/types/task";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const CALENDAR_PADDING = SPACING.sm * 2;
+const DAY_MARGIN = 2;
+const DAY_SIZE = (SCREEN_WIDTH - CALENDAR_PADDING - DAY_MARGIN * 14) / 7;
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -139,10 +151,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     );
   };
 
-  // Split days into weeks
+  // Split days into weeks, ensuring each week has exactly 7 slots
   const weeks: (number | null)[][] = [];
   for (let i = 0; i < days.length; i += 7) {
-    weeks.push(days.slice(i, i + 7));
+    const week = days.slice(i, i + 7);
+    // Pad the last week with nulls if needed
+    while (week.length < 7) {
+      week.push(null);
+    }
+    weeks.push(week);
   }
 
   return (
@@ -325,11 +342,12 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   weekdayText: {
-    flex: 1,
+    width: DAY_SIZE,
     textAlign: "center",
     fontSize: FONT_SIZES.xs,
     fontWeight: "500",
     color: COLORS.textSecondary,
+    marginHorizontal: DAY_MARGIN,
   },
   calendarGrid: {
     flex: 1,
@@ -339,14 +357,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm,
   },
   emptyDay: {
-    flex: 1,
-    aspectRatio: 1,
-    margin: 2,
+    width: DAY_SIZE,
+    height: DAY_SIZE,
+    margin: DAY_MARGIN,
   },
   day: {
-    flex: 1,
-    aspectRatio: 1,
-    margin: 2,
+    width: DAY_SIZE,
+    height: DAY_SIZE,
+    margin: DAY_MARGIN,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 8,

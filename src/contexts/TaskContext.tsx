@@ -41,19 +41,44 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Sort tasks: by date (no date last), then by priority (1 highest), then by creation
+  const sortTasks = useCallback((tasks: Task[]): Task[] => {
+    return [...tasks].sort((a, b) => {
+      // Completed tasks go to the end
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+      }
+
+      // Sort by due date (tasks without date go last among active)
+      const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      if (aDate !== bDate) {
+        return aDate - bDate;
+      }
+
+      // Then by priority (1 is highest, 4 is lowest)
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+
+      // Finally by creation date (newest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, []);
+
   const loadTasks = useCallback(async () => {
     try {
       setError(null);
       await databaseService.initDatabase();
       const loadedTasks = await databaseService.searchTasks({});
-      setAllTasks(loadedTasks);
+      setAllTasks(sortTasks(loadedTasks));
     } catch (err) {
       setError("Не удалось загрузить задачи");
       console.error("Error loading tasks:", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [sortTasks]);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -103,7 +128,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
       labels?: string[];
     }) => {
       const result = await databaseService.createTask(task);
-      // Оптимистичное обновление - добавляем новую задачу сразу
+      // Оптимистичное обновление - добавляем новую задачу и пересортируем
       const newTask: Task = {
         id: result.id,
         title: task.title,
@@ -118,10 +143,10 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      setAllTasks((prev) => [newTask, ...prev]);
+      setAllTasks((prev) => sortTasks([newTask, ...prev]));
       return result;
     },
-    [],
+    [sortTasks],
   );
 
   const toggleTask = useCallback(async (id: string) => {
@@ -159,22 +184,29 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
     setAllTasks((prev) => prev.filter((task) => task.id !== id));
   }, []);
 
-  const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
-    await databaseService.updateTask(id, {
-      title: updates.title,
-      description: updates.description,
-      priority: updates.priority,
-      dueDate: updates.dueDate ?? null,
-      dueTime: updates.dueTime ?? null,
-      projectId: updates.projectId ?? null,
-    });
-    // Оптимистичное обновление
-    setAllTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, ...updates, updatedAt: new Date() } : task,
-      ),
-    );
-  }, []);
+  const updateTask = useCallback(
+    async (id: string, updates: Partial<Task>) => {
+      await databaseService.updateTask(id, {
+        title: updates.title,
+        description: updates.description,
+        priority: updates.priority,
+        dueDate: updates.dueDate ?? null,
+        dueTime: updates.dueTime ?? null,
+        projectId: updates.projectId ?? null,
+      });
+      // Оптимистичное обновление с пересортировкой
+      setAllTasks((prev) =>
+        sortTasks(
+          prev.map((task) =>
+            task.id === id
+              ? { ...task, ...updates, updatedAt: new Date() }
+              : task,
+          ),
+        ),
+      );
+    },
+    [sortTasks],
+  );
 
   useEffect(() => {
     loadTasks();
