@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
 import { useProjects, useLabels } from "@/hooks";
+import { useAuth, useTheme } from "@/contexts";
 
 interface SettingsItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -56,12 +57,78 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { projects } = useProjects();
   const { labels } = useLabels();
+  const { user, isAuthenticated, signOut } = useAuth();
+  const { mode, setMode, colors } = useTheme();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const getThemeLabel = () => {
+    switch (mode) {
+      case "light":
+        return "Светлая";
+      case "dark":
+        return "Тёмная";
+      case "system":
+        return "Системная";
+    }
+  };
+
+  const cycleTheme = () => {
+    const themes: Array<"light" | "dark" | "system"> = [
+      "light",
+      "dark",
+      "system",
+    ];
+    const currentIndex = themes.indexOf(mode);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    const nextTheme = themes[nextIndex];
+    if (nextTheme) {
+      setMode(nextTheme);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Ещё</Text>
+        </View>
+
+        {/* Account Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Аккаунт</Text>
+          {isAuthenticated ? (
+            <>
+              <SettingsItem
+                icon="person-circle-outline"
+                title={user?.email || "Пользователь"}
+                subtitle="Premium аккаунт"
+                color="#10B981"
+              />
+              <SettingsItem
+                icon="sync-outline"
+                title="Синхронизация"
+                subtitle="Включена"
+                color="#6366F1"
+              />
+              <SettingsItem
+                icon="log-out-outline"
+                title="Выйти"
+                onPress={handleSignOut}
+                color="#EF4444"
+              />
+            </>
+          ) : (
+            <SettingsItem
+              icon="person-add-outline"
+              title="Войти или создать аккаунт"
+              subtitle="Для синхронизации и Premium функций"
+              onPress={() => router.push("/(auth)/sign-in")}
+              color="#6366F1"
+            />
+          )}
         </View>
 
         <View style={styles.section}>
@@ -90,8 +157,8 @@ export default function SettingsScreen() {
           <SettingsItem
             icon="color-palette-outline"
             title="Тема"
-            subtitle="Светлая"
-            onPress={() => {}}
+            subtitle={getThemeLabel()}
+            onPress={cycleTheme}
           />
         </View>
 

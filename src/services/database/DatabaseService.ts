@@ -55,7 +55,19 @@ class DatabaseService {
       const migrations = MIGRATIONS[version];
       if (migrations) {
         for (const sql of migrations) {
-          await this.db.execAsync(sql);
+          try {
+            await this.db.execAsync(sql);
+          } catch (err) {
+            // Ignore "duplicate column" errors for ALTER TABLE statements
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            if (errorMsg.includes("duplicate column")) {
+              console.log(
+                `Column already exists, skipping: ${sql.substring(0, 50)}...`,
+              );
+            } else {
+              throw err;
+            }
+          }
         }
       }
     }
