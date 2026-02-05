@@ -25,10 +25,11 @@ import { useProjects, useLabels } from "@/hooks";
 import { SubtaskList } from "@/components/tasks/SubtaskList";
 import { DatePicker } from "@/components/tasks/DatePicker";
 import { PriorityPicker } from "@/components/tasks/PriorityPicker";
+import { RecurrencePicker } from "@/components/tasks/RecurrencePicker";
 import { ProjectPicker, ProjectPickerInline } from "@/components/projects";
 import { LabelPicker, LabelPickerInline } from "@/components/labels";
 import { HoldToDeleteButton } from "@/components/ui/HoldToDeleteButton";
-import type { Task, Priority } from "@/types";
+import type { Task, Priority, RecurrenceRule } from "@/types";
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,6 +53,7 @@ export default function TaskDetailScreen() {
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [projectId, setProjectId] = useState<string | undefined>();
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
+  const [recurrence, setRecurrence] = useState<RecurrenceRule | null>(null);
 
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
@@ -74,6 +76,7 @@ export default function TaskDetailScreen() {
           setDueDate(loadedTask.dueDate ?? null);
           setProjectId(loadedTask.projectId);
           setSelectedLabelIds(loadedTask.labels);
+          setRecurrence(loadedTask.recurrence ?? null);
         }
 
         const loadedSubtasks = await databaseService.getSubtasks(id);
@@ -106,6 +109,7 @@ export default function TaskDetailScreen() {
         priority,
         dueDate: dueDate ?? undefined,
         projectId: projectId,
+        recurrence: recurrence ?? undefined,
       });
 
       // Update labels
@@ -148,7 +152,15 @@ export default function TaskDetailScreen() {
   useEffect(() => {
     if (isInitialLoadRef.current) return;
     hasChangesRef.current = true;
-  }, [title, description, priority, dueDate, projectId, selectedLabelIds]);
+  }, [
+    title,
+    description,
+    priority,
+    dueDate,
+    projectId,
+    selectedLabelIds,
+    recurrence,
+  ]);
 
   // Handle back navigation - save before leaving
   const handleBack = useCallback(async () => {
@@ -308,6 +320,8 @@ export default function TaskDetailScreen() {
             selectedIds={selectedLabelIds}
             onPress={() => setShowLabelPicker(true)}
           />
+
+          <RecurrencePicker value={recurrence} onChange={setRecurrence} />
         </View>
 
         <View style={styles.section}>

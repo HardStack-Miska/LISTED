@@ -8,7 +8,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { databaseService } from "@/services/database";
-import type { Task, Priority } from "@/types";
+import type { Task, Priority, RecurrenceRule } from "@/types";
 
 interface TaskContextValue {
   allTasks: Task[];
@@ -47,6 +47,56 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
     return d.getTime();
+  };
+
+  // Calculate next due date for recurring tasks
+  const getNextDueDate = (currentDate: Date, rule: RecurrenceRule): Date => {
+    const next = new Date(currentDate);
+
+    switch (rule.type) {
+      case "daily":
+        next.setDate(next.getDate() + rule.interval);
+        break;
+
+      case "weekly":
+        if (rule.daysOfWeek && rule.daysOfWeek.length > 0) {
+          // Find next day in daysOfWeek
+          let found = false;
+          for (let i = 1; i <= 7 && !found; i++) {
+            const checkDate = new Date(currentDate);
+            checkDate.setDate(checkDate.getDate() + i);
+            const dayOfWeek = checkDate.getDay();
+            if (rule.daysOfWeek.includes(dayOfWeek)) {
+              next.setTime(checkDate.getTime());
+              found = true;
+            }
+          }
+        } else {
+          next.setDate(next.getDate() + 7 * rule.interval);
+        }
+        break;
+
+      case "monthly":
+        next.setMonth(next.getMonth() + rule.interval);
+        if (rule.dayOfMonth) {
+          next.setDate(
+            Math.min(
+              rule.dayOfMonth,
+              new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate(),
+            ),
+          );
+        }
+        break;
+
+      case "yearly":
+        next.setFullYear(next.getFullYear() + rule.interval);
+        break;
+
+      default:
+        next.setDate(next.getDate() + 1);
+    }
+
+    return next;
   };
 
   // Sort tasks: by date -> priority -> name
@@ -160,42 +210,101 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
 
   const toggleTask = useCallback(
     async (id: string) => {
+      const task = allTasks.find((t) => t.id === id);
+      if (!task) return;
+
+      const isCompleting = !task.completed;
+
       await databaseService.toggleTaskComplete(id);
+
+      // If completing a recurring task, create the next occurrence
+      if (isCompleting && task.recurrence && task.dueDate) {
+        const nextDueDate = getNextDueDate(task.dueDate, task.recurrence);
+
+        // Check if we should stop (endDate or endAfterCount)
+        const shouldContinue =
+          (!task.recurrence.endDate ||
+            nextDueDate <= task.recurrence.endDate) &&
+          (!task.recurrence.endAfterCount || task.recurrence.endAfterCount > 1);
+
+        if (shouldContinue) {
+          const newRecurrence = task.recurrence.endAfterCount
+            ? {
+                ...task.recurrence,
+                endAfterCount: task.recurrence.endAfterCount - 1,
+              }
+            : task.recurrence;
+
+          const result = await databaseService.createTask({
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            dueDate: nextDueDate,
+            dueTime: task.dueTime,
+            projectId: task.projectId,
+            labels: task.labels,
+          });
+
+          // Update recurrence in new task
+          await databaseService.updateTask(result.id, {
+            recurrence: newRecurrence,
+          });
+
+          // Add new task to state
+          const newTask: Task = {
+            id: result.id,
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            completed: false,
+            dueDate: nextDueDate,
+            dueTime: task.dueTime,
+            projectId: task.projectId,
+            labels: task.labels,
+            recurrence: newRecurrence,
+            order: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          setAllTasks((prev) =>
+            sortTasks([
+              newTask,
+              ...prev.map((t) =>
+                t.id === id
+                  ? { ...t, completed: true, completedAt: new Date() }
+                  : t,
+              ),
+            ]),
+          );
+          return;
+        }
+      }
+
+      // Normal toggle without recurrence
       setAllTasks((prev) =>
         sortTasks(
-          prev.map((task) =>
-            task.id === id
+          prev.map((t) =>
+            t.id === id
               ? {
-                  ...task,
-                  completed: !task.completed,
-                  completedAt: !task.completed ? new Date() : undefined,
+                  ...t,
+                  completed: !t.completed,
+                  completedAt: !t.completed ? new Date() : undefined,
                 }
-              : task,
+              : t,
           ),
         ),
       );
     },
-    [sortTasks],
+    [allTasks, sortTasks],
   );
 
   const toggleComplete = useCallback(
     async (id: string) => {
-      await databaseService.toggleTaskComplete(id);
-      setAllTasks((prev) =>
-        sortTasks(
-          prev.map((task) =>
-            task.id === id
-              ? {
-                  ...task,
-                  completed: !task.completed,
-                  completedAt: !task.completed ? new Date() : undefined,
-                }
-              : task,
-          ),
-        ),
-      );
+      // Delegate to toggleTask which handles recurrence
+      await toggleTask(id);
     },
-    [sortTasks],
+    [toggleTask],
   );
 
   const deleteTask = useCallback(async (id: string) => {
@@ -212,6 +321,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
         dueDate: updates.dueDate ?? null,
         dueTime: updates.dueTime ?? null,
         projectId: updates.projectId ?? null,
+        recurrence: updates.recurrence ?? null,
       });
       // Оптимистичное обновление с пересортировкой
       setAllTasks((prev) =>

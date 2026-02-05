@@ -9,6 +9,7 @@ import type {
   Project,
   Label,
   SearchFilters,
+  RecurrenceRule,
 } from "@/types";
 
 const generateId = (): string => {
@@ -688,6 +689,7 @@ class DatabaseService {
       dueDate: Date | null;
       dueTime: string | null;
       projectId: string | null;
+      recurrence: RecurrenceRule | null;
     }>,
   ): Promise<void> {
     if (!this.db) await this.initDatabase();
@@ -718,6 +720,12 @@ class DatabaseService {
     if (updates.projectId !== undefined) {
       fields.push("project_id = ?");
       values.push(updates.projectId);
+    }
+    if (updates.recurrence !== undefined) {
+      fields.push("recurrence = ?");
+      values.push(
+        updates.recurrence ? JSON.stringify(updates.recurrence) : null,
+      );
     }
 
     if (fields.length === 0) return;
