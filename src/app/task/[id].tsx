@@ -8,26 +8,30 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Modal,
-  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
 import { databaseService } from "@/services/database";
+import { useTaskContext } from "@/contexts";
 import { useProjects, useLabels } from "@/hooks";
 import { SubtaskList } from "@/components/tasks/SubtaskList";
 import { DatePicker } from "@/components/tasks/DatePicker";
+import { PriorityPicker } from "@/components/tasks/PriorityPicker";
 import { ProjectPicker, ProjectPickerInline } from "@/components/projects";
 import { LabelPicker, LabelPickerInline } from "@/components/labels";
 import { HoldToDeleteButton } from "@/components/ui/HoldToDeleteButton";
 import type { Task, Priority } from "@/types";
-import { PRIORITY_COLORS } from "@/types/task";
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const {
+    updateTask,
+    deleteTask: contextDeleteTask,
+    refresh,
+  } = useTaskContext();
   const { projects } = useProjects();
   const { labels, addLabelToTask, removeLabelFromTask } = useLabels();
 
@@ -43,7 +47,6 @@ export default function TaskDetailScreen() {
   const [projectId, setProjectId] = useState<string | undefined>();
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
 
-  const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
 
@@ -84,18 +87,19 @@ export default function TaskDetailScreen() {
     loadTask();
   }, [id]);
 
-  // Autosave function
+  // Autosave function - uses context updateTask for global sync
   const performSave = useCallback(async () => {
     if (!id || !title.trim() || isInitialLoadRef.current) return;
 
     setIsSaving(true);
     try {
-      await databaseService.updateTask(id, {
+      // Use context's updateTask for global synchronization
+      await updateTask(id, {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
-        dueDate: dueDate ?? null,
-        projectId: projectId ?? null,
+        dueDate: dueDate ?? undefined,
+        projectId: projectId,
       });
 
       // Update labels
@@ -128,6 +132,7 @@ export default function TaskDetailScreen() {
     projectId,
     selectedLabelIds,
     task,
+    updateTask,
     addLabelToTask,
     removeLabelFromTask,
   ]);
@@ -163,13 +168,14 @@ export default function TaskDetailScreen() {
     if (!id) return;
 
     try {
-      await databaseService.deleteTask(id);
+      // Use context's deleteTask for global sync
+      await contextDeleteTask(id);
       router.back();
     } catch (error) {
       console.error("Error deleting task:", error);
       Alert.alert("Ошибка", "Не удалось удалить задачу");
     }
-  }, [id, router]);
+  }, [id, contextDeleteTask, router]);
 
   const handleAddSubtask = useCallback(
     async (subtaskTitle: string) => {
@@ -284,36 +290,8 @@ export default function TaskDetailScreen() {
           textAlignVertical="top"
         />
 
+        {/* Order matches QuickAddTask: Date -> Priority -> Project -> Labels */}
         <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.fieldRow}
-            onPress={() => setShowPriorityPicker(true)}
-          >
-            <View style={styles.fieldLeft}>
-              <Ionicons
-                name="flag-outline"
-                size={20}
-                color={COLORS.textSecondary}
-              />
-              <Text style={styles.fieldLabel}>Приоритет</Text>
-            </View>
-            <View style={styles.fieldRight}>
-              <View
-                style={[
-                  styles.priorityBadge,
-                  { backgroundColor: getPriorityColor(priority) },
-                ]}
-              >
-                <Text style={styles.priorityText}>P{priority}</Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color={COLORS.textSecondary}
-              />
-            </View>
-          </TouchableOpacity>
-
           <View style={styles.dateSection}>
             <View style={styles.dateLabelRow}>
               <Ionicons
@@ -325,6 +303,8 @@ export default function TaskDetailScreen() {
             </View>
             <DatePicker value={dueDate} onChange={setDueDate} />
           </View>
+
+          <PriorityPicker value={priority} onChange={setPriority} />
 
           <ProjectPickerInline
             projects={projects}
@@ -353,47 +333,6 @@ export default function TaskDetailScreen() {
         </View>
       </ScrollView>
 
-      <Modal
-        visible={showPriorityPicker}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowPriorityPicker(false)}
-      >
-        <SafeAreaView style={styles.pickerContainer}>
-          <View style={styles.pickerHeader}>
-            <Text style={styles.pickerTitle}>Выберите приоритет</Text>
-            <TouchableOpacity onPress={() => setShowPriorityPicker(false)}>
-              <Ionicons name="close" size={24} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.priorityOptions}>
-            {([1, 2, 3, 4] as Priority[]).map((p) => (
-              <Pressable
-                key={p}
-                style={[
-                  styles.priorityOption,
-                  priority === p && styles.priorityOptionSelected,
-                ]}
-                onPress={() => {
-                  setPriority(p);
-                  setShowPriorityPicker(false);
-                }}
-              >
-                <Ionicons
-                  name={priority === p ? "flag" : "flag-outline"}
-                  size={24}
-                  color={PRIORITY_COLORS[p]}
-                />
-                <Text style={styles.priorityOptionText}>Приоритет {p}</Text>
-                {priority === p && (
-                  <Ionicons name="checkmark" size={20} color={COLORS.primary} />
-                )}
-              </Pressable>
-            ))}
-          </View>
-        </SafeAreaView>
-      </Modal>
-
       <ProjectPicker
         visible={showProjectPicker}
         projects={projects}
@@ -412,10 +351,6 @@ export default function TaskDetailScreen() {
     </SafeAreaView>
   );
 }
-
-const getPriorityColor = (priority: Priority): string => {
-  return PRIORITY_COLORS[priority];
-};
 
 const styles = StyleSheet.create({
   container: {
@@ -494,37 +429,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     gap: SPACING.sm,
   },
-  fieldRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: COLORS.surface,
-    padding: SPACING.md,
-    borderRadius: 12,
-  },
-  fieldLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
   fieldLabel: {
     fontSize: FONT_SIZES.md,
     color: COLORS.text,
-  },
-  fieldRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-  },
-  priorityBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  priorityText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "600",
-    color: "#FFFFFF",
   },
   dateSection: {
     backgroundColor: COLORS.surface,
@@ -540,42 +447,5 @@ const styles = StyleSheet.create({
   deleteSection: {
     marginTop: SPACING.lg,
     marginBottom: SPACING.xl,
-  },
-  pickerContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  pickerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  pickerTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
-  },
-  priorityOptions: {
-    padding: SPACING.md,
-  },
-  priorityOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: SPACING.md,
-    borderRadius: 12,
-    marginBottom: SPACING.sm,
-    backgroundColor: COLORS.surface,
-    gap: SPACING.sm,
-  },
-  priorityOptionSelected: {
-    backgroundColor: COLORS.primaryLight,
-  },
-  priorityOptionText: {
-    flex: 1,
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text,
   },
 });
