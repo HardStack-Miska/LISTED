@@ -1,21 +1,16 @@
-import React, { useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Animated,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, FONT_SIZES } from '@/constants';
-import type { Task, Priority } from '@/types/task';
-import { PRIORITY_COLORS } from '@/types/task';
+import React, { useCallback, useMemo } from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS, SPACING, FONT_SIZES } from "@/constants";
+import type { Task, Priority, Label } from "@/types/task";
+import { PRIORITY_COLORS } from "@/types/task";
 
 interface TaskItemProps {
   task: Task;
   onToggleComplete: (id: string) => void;
   onPress: (id: string) => void;
   onLongPress?: (id: string) => void;
+  allLabels?: Label[];
 }
 
 const formatDueDate = (date: Date): string => {
@@ -27,11 +22,14 @@ const formatDueDate = (date: Date): string => {
   const isTomorrow = date.toDateString() === tomorrow.toDateString();
   const isPast = date < today && !isToday;
 
-  if (isToday) return 'Сегодня';
-  if (isTomorrow) return 'Завтра';
+  if (isToday) return "Сегодня";
+  if (isTomorrow) return "Завтра";
 
-  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
-  return date.toLocaleDateString('ru-RU', options);
+  const options: Intl.DateTimeFormatOptions = {
+    day: "numeric",
+    month: "short",
+  };
+  return date.toLocaleDateString("ru-RU", options);
 };
 
 const getDueDateColor = (date: Date): string => {
@@ -50,10 +48,19 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   onToggleComplete,
   onPress,
   onLongPress,
+  allLabels = [],
 }) => {
   const handleToggle = useCallback(() => {
     onToggleComplete(task.id);
   }, [task.id, onToggleComplete]);
+
+  // Get label objects for display
+  const taskLabels = useMemo(() => {
+    if (!task.labels.length || !allLabels.length) return [];
+    return task.labels
+      .map((labelId) => allLabels.find((l) => l.id === labelId))
+      .filter((l): l is Label => l !== undefined);
+  }, [task.labels, allLabels]);
 
   const handlePress = useCallback(() => {
     onPress(task.id);
@@ -68,10 +75,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.container, pressed && styles.pressed]}
       onPress={handlePress}
       onLongPress={handleLongPress}
     >
@@ -91,10 +95,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 
       <View style={styles.content}>
         <Text
-          style={[
-            styles.title,
-            task.completed && styles.titleCompleted,
-          ]}
+          style={[styles.title, task.completed && styles.titleCompleted]}
           numberOfLines={2}
         >
           {task.title}
@@ -121,13 +122,32 @@ export const TaskItem: React.FC<TaskItemProps> = ({
               </View>
             )}
 
-            {task.labels.length > 0 && (
+            {taskLabels.length > 0 && (
               <View style={styles.labelsContainer}>
-                {task.labels.slice(0, 2).map((label, index) => (
-                  <View key={index} style={styles.label}>
-                    <Text style={styles.labelText}>{label}</Text>
+                {taskLabels.slice(0, 2).map((label) => (
+                  <View
+                    key={label.id}
+                    style={[
+                      styles.label,
+                      { backgroundColor: label.color + "20" },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.labelDot,
+                        { backgroundColor: label.color },
+                      ]}
+                    />
+                    <Text style={[styles.labelText, { color: label.color }]}>
+                      {label.name}
+                    </Text>
                   </View>
                 ))}
+                {task.labels.length > 2 && (
+                  <Text style={styles.moreLabels}>
+                    +{task.labels.length - 2}
+                  </Text>
+                )}
               </View>
             )}
           </View>
@@ -148,8 +168,8 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
     backgroundColor: COLORS.background,
@@ -164,8 +184,8 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: SPACING.md,
     marginTop: 2,
   },
@@ -182,37 +202,50 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   titleCompleted: {
-    textDecorationLine: 'line-through',
+    textDecorationLine: "line-through",
     color: COLORS.textSecondary,
   },
   meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: SPACING.xs,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: SPACING.sm,
   },
   dueDateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   dueDate: {
     fontSize: FONT_SIZES.xs,
   },
   labelsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: SPACING.xs,
+    flexWrap: "wrap",
   },
   label: {
-    backgroundColor: COLORS.surface,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.xs,
     paddingVertical: 2,
     borderRadius: 4,
+    gap: 4,
+  },
+  labelDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   labelText: {
     fontSize: FONT_SIZES.xs,
+    fontWeight: "500",
+  },
+  moreLabels: {
+    fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
+    marginLeft: 2,
   },
   priorityFlag: {
     marginLeft: SPACING.sm,

@@ -10,7 +10,6 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, PRESET_COLORS } from "@/constants";
 import { useProjects } from "@/hooks";
@@ -19,7 +18,6 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Project } from "@/types";
 
 export default function ProjectsScreen() {
-  const router = useRouter();
   const { projects, isLoading, createProject, updateProject, deleteProject } =
     useProjects();
 
@@ -84,9 +82,10 @@ export default function ProjectsScreen() {
 
   const handleProjectPress = useCallback(
     (project: Project) => {
-      router.push(`/projects/${project.id}`);
+      // Open editor for the project
+      handleEdit(project);
     },
-    [router],
+    [handleEdit],
   );
 
   const renderProject = useCallback(

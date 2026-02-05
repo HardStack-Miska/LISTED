@@ -7,17 +7,31 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
 import { useTasks } from "@/hooks/useTasks";
+import { useLabels } from "@/hooks/useLabels";
 import { TaskItem, QuickAddTask } from "@/components/tasks";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Task, Priority } from "@/types";
 
+interface DeleteDialogState {
+  visible: boolean;
+  task: Task | null;
+}
+
 export default function TodayScreen() {
+  const router = useRouter();
   const { tasks, isLoading, refresh, toggleComplete, deleteTask, createTask } =
     useTasks("today");
+  const { labels } = useLabels();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
+    visible: false,
+    task: null,
+  });
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -32,18 +46,33 @@ export default function TodayScreen() {
     [toggleComplete],
   );
 
-  const handleTaskPress = useCallback((id: string) => {
-    // TODO: Navigate to task details
-    console.log("Task pressed:", id);
-  }, []);
+  const handleTaskPress = useCallback(
+    (id: string) => {
+      router.push(`/tasks/${id}`);
+    },
+    [router],
+  );
 
   const handleTaskLongPress = useCallback(
-    async (id: string) => {
-      // TODO: Show action menu
-      await deleteTask(id);
+    (id: string) => {
+      const task = tasks.find((t) => t.id === id);
+      if (task) {
+        setDeleteDialog({ visible: true, task });
+      }
     },
-    [deleteTask],
+    [tasks],
   );
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (deleteDialog.task) {
+      await deleteTask(deleteDialog.task.id);
+    }
+    setDeleteDialog({ visible: false, task: null });
+  }, [deleteDialog.task, deleteTask]);
+
+  const handleDeleteCancel = useCallback(() => {
+    setDeleteDialog({ visible: false, task: null });
+  }, []);
 
   const handleAddTask = useCallback(() => {
     setShowQuickAdd(true);
@@ -88,9 +117,10 @@ export default function TodayScreen() {
         onToggleComplete={handleToggleComplete}
         onPress={handleTaskPress}
         onLongPress={handleTaskLongPress}
+        allLabels={labels}
       />
     ),
-    [handleToggleComplete, handleTaskPress, handleTaskLongPress],
+    [handleToggleComplete, handleTaskPress, handleTaskLongPress, labels],
   );
 
   const renderSectionHeader = (
@@ -146,6 +176,7 @@ export default function TodayScreen() {
                       onToggleComplete={handleToggleComplete}
                       onPress={handleTaskPress}
                       onLongPress={handleTaskLongPress}
+                      allLabels={labels}
                     />
                   ))}
                 </>
@@ -161,6 +192,7 @@ export default function TodayScreen() {
                       onToggleComplete={handleToggleComplete}
                       onPress={handleTaskPress}
                       onLongPress={handleTaskLongPress}
+                      allLabels={labels}
                     />
                   ))}
                 </>
@@ -176,6 +208,7 @@ export default function TodayScreen() {
                       onToggleComplete={handleToggleComplete}
                       onPress={handleTaskPress}
                       onLongPress={handleTaskLongPress}
+                      allLabels={labels}
                     />
                   ))}
                 </>
@@ -197,6 +230,16 @@ export default function TodayScreen() {
         visible={showQuickAdd}
         onClose={() => setShowQuickAdd(false)}
         onSubmit={handleQuickAddSubmit}
+      />
+      <ConfirmDialog
+        visible={deleteDialog.visible}
+        title={`Удалить "${deleteDialog.task?.title ?? "задачу"}"?`}
+        message="Это действие нельзя отменить."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        confirmStyle="destructive"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
       />
     </View>
   );

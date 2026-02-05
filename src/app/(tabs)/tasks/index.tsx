@@ -188,9 +188,10 @@ export default function TasksScreen() {
         onPress={handleTaskPress}
         onToggleComplete={toggleTask}
         onLongPress={handleTaskLongPress}
+        allLabels={labels}
       />
     ),
-    [handleTaskPress, toggleTask, handleTaskLongPress],
+    [handleTaskPress, toggleTask, handleTaskLongPress, labels],
   );
 
   const getFilterTitle = () => {
@@ -305,6 +306,7 @@ export default function TasksScreen() {
                   onPress={handleTaskPress}
                   onToggleComplete={toggleTask}
                   onLongPress={handleTaskLongPress}
+                  allLabels={labels}
                 />
               ))}
             </View>
