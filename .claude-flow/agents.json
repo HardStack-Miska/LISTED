@@ -12,6 +12,32 @@
       },
       "createdAt": "2026-02-04T23:51:02.377Z",
       "domain": "hive-mind"
+    },
+    "hive-worker-1770253887868-39yc": {
+      "agentId": "hive-worker-1770253887868-39yc",
+      "agentType": "worker",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "role": "worker",
+        "hiveRole": "worker"
+      },
+      "createdAt": "2026-02-05T01:11:27.868Z",
+      "domain": "hive-mind"
+    },
+    "hive-worker-1770253998875-r4nw": {
+      "agentId": "hive-worker-1770253998875-r4nw",
+      "agentType": "worker",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "role": "worker",
+        "hiveRole": "worker"
+      },
+      "createdAt": "2026-02-05T01:13:18.875Z",
+      "domain": "hive-mind"
     }
   }
 }

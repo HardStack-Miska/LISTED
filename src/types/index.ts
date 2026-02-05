@@ -1,16 +1,16 @@
 // Базовые типы для приложения LISTED
 
 export type BlockType =
-  | 'paragraph'
-  | 'heading1'
-  | 'heading2'
-  | 'heading3'
-  | 'bulletList'
-  | 'numberedList'
-  | 'checkbox'
-  | 'code'
-  | 'image'
-  | 'pageLink';
+  | "paragraph"
+  | "heading1"
+  | "heading2"
+  | "heading3"
+  | "bulletList"
+  | "numberedList"
+  | "checkbox"
+  | "code"
+  | "image"
+  | "pageLink";
 
 export interface BlockData {
   text?: string;
@@ -49,7 +49,7 @@ export interface Workspace {
 }
 
 // Sync types для будущей синхронизации
-export type SyncStatus = 'synced' | 'pending' | 'conflict' | 'error';
+export type SyncStatus = "synced" | "pending" | "conflict" | "error";
 
 export interface SyncMetadata {
   status: SyncStatus;
@@ -57,3 +57,6 @@ export interface SyncMetadata {
   serverVersion?: number;
   localVersion: number;
 }
+
+// Re-export task types
+export * from "./task";

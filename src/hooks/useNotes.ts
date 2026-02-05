@@ -157,13 +157,23 @@ export const useNotes = (): UseNotesResult => {
 
   const createNote = useCallback(
     async (title?: string): Promise<Page> => {
-      if (!workspaceId) {
-        throw new Error("Workspace not initialized");
+      let wsId = workspaceId;
+
+      // Если workspace ещё не загружен, инициализируем БД и получаем его
+      if (!wsId) {
+        await databaseService.initDatabase();
+        const workspaces = await databaseService.getWorkspaces();
+        const ws = workspaces[0];
+        if (!ws) {
+          throw new Error("No workspace found");
+        }
+        wsId = ws.id;
+        setWorkspaceId(wsId);
       }
 
       const newPage = await databaseService.createPage({
         title: title || "Новая заметка",
-        workspaceId,
+        workspaceId: wsId,
       });
 
       const newNoteItem = pageToNoteListItem(newPage);

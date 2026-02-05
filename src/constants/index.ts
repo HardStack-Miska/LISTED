@@ -22,19 +22,47 @@ export const DATABASE = {
   VERSION: 1,
 } as const;
 
-export const COLORS = {
-  primary: "#2F80ED",
-  secondary: "#6B7280",
-  background: "#FFFFFF",
-  surface: "#F9FAFB",
-  text: "#111827",
-  textSecondary: "#6B7280",
-  border: "#E5E7EB",
-  error: "#EF4444",
-  success: "#10B981",
-  warning: "#F59E0B",
-  white: "#FFFFFF",
+// Todoist-style colors
+export const COLORS_LIGHT = {
+  primary: "#dc4c3e", // Todoist red
+  secondary: "#808080",
+  background: "#ffffff",
+  surface: "#fafafa",
+  text: "#202020",
+  textSecondary: "#808080",
+  border: "#f0f0f0",
+  error: "#dc4c3e",
+  success: "#058527",
+  warning: "#ff9900",
+  white: "#ffffff",
+  // Priority colors
+  priorityP1: "#d1453b",
+  priorityP2: "#eb8909",
+  priorityP3: "#246fe0",
+  priorityP4: "#808080",
 } as const;
+
+export const COLORS_DARK = {
+  primary: "#dc4c3e",
+  secondary: "#a0a0a0",
+  background: "#1f1f1f",
+  surface: "#282828",
+  text: "#ffffff",
+  textSecondary: "#a0a0a0",
+  border: "#333333",
+  error: "#dc4c3e",
+  success: "#058527",
+  warning: "#ff9900",
+  white: "#ffffff",
+  // Priority colors (same in dark)
+  priorityP1: "#d1453b",
+  priorityP2: "#eb8909",
+  priorityP3: "#246fe0",
+  priorityP4: "#808080",
+} as const;
+
+// Default export for backward compatibility
+export const COLORS = COLORS_LIGHT;
 
 export const UI_SIZES = {
   fabSize: 56,

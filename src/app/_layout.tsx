@@ -1,29 +1,41 @@
-import React from 'react';
-import { Stack } from 'expo-router';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { COLORS } from '@/constants';
+import React from "react";
+import { Stack } from "expo-router";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { ThemeProvider, useTheme } from "@/contexts";
 
-export default function RootLayout() {
+function RootLayoutContent() {
+  const { colors, isDark } = useTheme();
+
   return (
-    <SafeAreaProvider>
-      <StatusBar style="auto" />
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: COLORS.background,
+            backgroundColor: colors.background,
           },
-          headerTintColor: COLORS.text,
+          headerTintColor: colors.text,
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: "600",
           },
           contentStyle: {
-            backgroundColor: COLORS.background,
+            backgroundColor: colors.background,
           },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <RootLayoutContent />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

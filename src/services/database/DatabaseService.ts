@@ -1,6 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import { DATABASE_NAME, DATABASE_VERSION, MIGRATIONS } from "./schema";
-import type { Page, Block, Workspace, BlockType } from "@/types";
+import type { Page, Block, Workspace, BlockType, Task } from "@/types";
 
 const generateId = (): string => {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -443,6 +443,326 @@ class DatabaseService {
     }
 
     return true;
+  }
+
+  // ==================== TASKS ====================
+
+  async createTask(task: {
+    title: string;
+    description?: string;
+    priority?: number;
+    dueDate?: Date;
+    dueTime?: string;
+    projectId?: string;
+    parentId?: string;
+    labels?: string[];
+  }): Promise<{ id: string }> {
+    if (!this.db) await this.initDatabase();
+
+    const id = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+
+    await this.db!.runAsync(
+      `INSERT INTO tasks (id, title, description, priority, due_date, due_time, project_id, parent_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      task.title,
+      task.description ?? null,
+      task.priority ?? 4,
+      task.dueDate?.toISOString() ?? null,
+      task.dueTime ?? null,
+      task.projectId ?? null,
+      task.parentId ?? null,
+      now,
+      now,
+    );
+
+    // Add labels if provided
+    if (task.labels && task.labels.length > 0) {
+      for (const labelId of task.labels) {
+        await this.db!.runAsync(
+          "INSERT OR IGNORE INTO task_labels (task_id, label_id) VALUES (?, ?)",
+          id,
+          labelId,
+        );
+      }
+    }
+
+    return { id };
+  }
+
+  async getTask(id: string): Promise<Task | null> {
+    if (!this.db) await this.initDatabase();
+
+    const row = await this.db!.getFirstAsync<{
+      id: string;
+      title: string;
+      description: string | null;
+      priority: number;
+      due_date: string | null;
+      due_time: string | null;
+      completed: number;
+      completed_at: string | null;
+      project_id: string | null;
+      parent_id: string | null;
+      task_order: number;
+      created_at: string;
+      updated_at: string;
+    }>("SELECT * FROM tasks WHERE id = ?", id);
+
+    if (!row) return null;
+
+    const labels = await this.getTaskLabels(id);
+
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description ?? undefined,
+      priority: row.priority as 1 | 2 | 3 | 4,
+      dueDate: row.due_date ? new Date(row.due_date) : undefined,
+      dueTime: row.due_time ?? undefined,
+      completed: row.completed === 1,
+      completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
+      projectId: row.project_id ?? undefined,
+      parentId: row.parent_id ?? undefined,
+      labels,
+      order: row.task_order,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    };
+  }
+
+  async getTaskLabels(taskId: string): Promise<string[]> {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{ label_id: string }>(
+      "SELECT label_id FROM task_labels WHERE task_id = ?",
+      taskId,
+    );
+
+    return rows.map((r) => r.label_id);
+  }
+
+  async getTasksForToday(): Promise<Task[]> {
+    if (!this.db) await this.initDatabase();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      title: string;
+      description: string | null;
+      priority: number;
+      due_date: string | null;
+      due_time: string | null;
+      completed: number;
+      completed_at: string | null;
+      project_id: string | null;
+      parent_id: string | null;
+      task_order: number;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT * FROM tasks
+       WHERE (due_date >= ? AND due_date < ?) OR (due_date < ? AND completed = 0)
+       ORDER BY completed ASC, priority ASC, due_date ASC, task_order ASC`,
+      today.toISOString(),
+      tomorrow.toISOString(),
+      today.toISOString(),
+    );
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const labels = await this.getTaskLabels(row.id);
+        return {
+          id: row.id,
+          title: row.title,
+          description: row.description ?? undefined,
+          priority: row.priority as 1 | 2 | 3 | 4,
+          dueDate: row.due_date ? new Date(row.due_date) : undefined,
+          dueTime: row.due_time ?? undefined,
+          completed: row.completed === 1,
+          completedAt: row.completed_at
+            ? new Date(row.completed_at)
+            : undefined,
+          projectId: row.project_id ?? undefined,
+          parentId: row.parent_id ?? undefined,
+          labels,
+          order: row.task_order,
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at),
+        };
+      }),
+    );
+  }
+
+  async getTasksUpcoming(): Promise<Task[]> {
+    if (!this.db) await this.initDatabase();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      title: string;
+      description: string | null;
+      priority: number;
+      due_date: string | null;
+      due_time: string | null;
+      completed: number;
+      completed_at: string | null;
+      project_id: string | null;
+      parent_id: string | null;
+      task_order: number;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT * FROM tasks
+       WHERE due_date >= ? AND completed = 0
+       ORDER BY due_date ASC, priority ASC, task_order ASC`,
+      today.toISOString(),
+    );
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const labels = await this.getTaskLabels(row.id);
+        return {
+          id: row.id,
+          title: row.title,
+          description: row.description ?? undefined,
+          priority: row.priority as 1 | 2 | 3 | 4,
+          dueDate: row.due_date ? new Date(row.due_date) : undefined,
+          dueTime: row.due_time ?? undefined,
+          completed: row.completed === 1,
+          completedAt: row.completed_at
+            ? new Date(row.completed_at)
+            : undefined,
+          projectId: row.project_id ?? undefined,
+          parentId: row.parent_id ?? undefined,
+          labels,
+          order: row.task_order,
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at),
+        };
+      }),
+    );
+  }
+
+  async toggleTaskComplete(id: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    const task = await this.getTask(id);
+    if (!task) return;
+
+    const now = new Date().toISOString();
+    const newCompleted = task.completed ? 0 : 1;
+    const completedAt = newCompleted === 1 ? now : null;
+
+    await this.db!.runAsync(
+      "UPDATE tasks SET completed = ?, completed_at = ?, updated_at = ? WHERE id = ?",
+      newCompleted,
+      completedAt,
+      now,
+      id,
+    );
+  }
+
+  async updateTask(
+    id: string,
+    updates: Partial<{
+      title: string;
+      description: string;
+      priority: number;
+      dueDate: Date | null;
+      dueTime: string | null;
+      projectId: string | null;
+    }>,
+  ): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    const fields: string[] = [];
+    const values: (string | number | null)[] = [];
+
+    if (updates.title !== undefined) {
+      fields.push("title = ?");
+      values.push(updates.title);
+    }
+    if (updates.description !== undefined) {
+      fields.push("description = ?");
+      values.push(updates.description);
+    }
+    if (updates.priority !== undefined) {
+      fields.push("priority = ?");
+      values.push(updates.priority);
+    }
+    if (updates.dueDate !== undefined) {
+      fields.push("due_date = ?");
+      values.push(updates.dueDate?.toISOString() ?? null);
+    }
+    if (updates.dueTime !== undefined) {
+      fields.push("due_time = ?");
+      values.push(updates.dueTime);
+    }
+    if (updates.projectId !== undefined) {
+      fields.push("project_id = ?");
+      values.push(updates.projectId);
+    }
+
+    if (fields.length === 0) return;
+
+    fields.push("updated_at = ?");
+    values.push(new Date().toISOString());
+    values.push(id);
+
+    await this.db!.runAsync(
+      `UPDATE tasks SET ${fields.join(", ")} WHERE id = ?`,
+      ...values,
+    );
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    await this.db!.runAsync("DELETE FROM tasks WHERE id = ?", id);
+  }
+
+  // ==================== LABELS ====================
+
+  async createLabel(name: string, color: string): Promise<{ id: string }> {
+    if (!this.db) await this.initDatabase();
+
+    const id = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    await this.db!.runAsync(
+      "INSERT INTO labels (id, name, color) VALUES (?, ?, ?)",
+      id,
+      name,
+      color,
+    );
+
+    return { id };
+  }
+
+  async getLabels(): Promise<
+    Array<{ id: string; name: string; color: string; order: number }>
+  > {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      name: string;
+      color: string;
+      label_order: number;
+    }>("SELECT * FROM labels ORDER BY label_order ASC");
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      color: row.color,
+      order: row.label_order,
+    }));
   }
 }
 
