@@ -14,17 +14,26 @@ interface TaskItemProps {
   projects?: Project[];
 }
 
-const formatDueDate = (date: Date): string => {
+const isOverdue = (date: Date, completed: boolean): boolean => {
+  if (completed) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDay = new Date(date);
+  dueDay.setHours(0, 0, 0, 0);
+  return dueDay < today;
+};
+
+const formatDueDate = (date: Date, completed: boolean): string => {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   const isToday = date.toDateString() === today.toDateString();
   const isTomorrow = date.toDateString() === tomorrow.toDateString();
-  const isPast = date < today && !isToday;
 
   if (isToday) return "Сегодня";
   if (isTomorrow) return "Завтра";
+  if (isOverdue(date, completed)) return "Просрочено";
 
   const options: Intl.DateTimeFormatOptions = {
     day: "numeric",
@@ -33,7 +42,8 @@ const formatDueDate = (date: Date): string => {
   return date.toLocaleDateString("ru-RU", options);
 };
 
-const getDueDateColor = (date: Date): string => {
+const getDueDateColor = (date: Date, completed: boolean): string => {
+  if (completed) return COLORS.textSecondary;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueDay = new Date(date);
@@ -80,10 +90,15 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 
   const priorityColor = PRIORITY_COLORS[task.priority];
   const showPriorityFlag = task.priority < 4;
+  const taskIsOverdue = task.dueDate && isOverdue(task.dueDate, task.completed);
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.container, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.container,
+        pressed && styles.pressed,
+        taskIsOverdue && styles.overdueContainer,
+      ]}
       onPress={handlePress}
       onLongPress={handleLongPress}
     >
@@ -112,19 +127,25 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         {(task.dueDate || task.description) && (
           <View style={styles.meta}>
             {task.dueDate && (
-              <View style={styles.dueDateContainer}>
+              <View
+                style={[
+                  styles.dueDateContainer,
+                  taskIsOverdue && styles.overdueBadge,
+                ]}
+              >
                 <Ionicons
-                  name="calendar-outline"
+                  name={taskIsOverdue ? "alert-circle" : "calendar-outline"}
                   size={12}
-                  color={getDueDateColor(task.dueDate)}
+                  color={getDueDateColor(task.dueDate, task.completed)}
                 />
                 <Text
                   style={[
                     styles.dueDate,
-                    { color: getDueDateColor(task.dueDate) },
+                    { color: getDueDateColor(task.dueDate, task.completed) },
+                    taskIsOverdue && styles.overdueText,
                   ]}
                 >
-                  {formatDueDate(task.dueDate)}
+                  {formatDueDate(task.dueDate, task.completed)}
                   {task.dueTime && ` ${task.dueTime}`}
                 </Text>
               </View>
@@ -198,6 +219,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  overdueContainer: {
+    backgroundColor: COLORS.error + "08",
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.error,
+  },
   pressed: {
     backgroundColor: COLORS.surface,
   },
@@ -239,8 +265,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
+  overdueBadge: {
+    backgroundColor: COLORS.error + "15",
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
   dueDate: {
     fontSize: FONT_SIZES.xs,
+  },
+  overdueText: {
+    fontWeight: "600",
   },
   projectContainer: {
     flexDirection: "row",

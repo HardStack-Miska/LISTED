@@ -20,6 +20,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Task, Project, Label, Priority } from "@/types";
 
 type FilterType = "all" | "upcoming" | "project" | "label";
+type SortType = "default" | "priority" | "date" | "name";
 
 interface FilterChip {
   id: string;
@@ -28,6 +29,13 @@ interface FilterChip {
   icon: string;
   color?: string;
 }
+
+const SORT_OPTIONS: { value: SortType; label: string; icon: string }[] = [
+  { value: "default", label: "По умолчанию", icon: "swap-vertical" },
+  { value: "priority", label: "По приоритету", icon: "flag" },
+  { value: "date", label: "По дате", icon: "calendar" },
+  { value: "name", label: "По имени", icon: "text" },
+];
 
 export default function TasksScreen() {
   const router = useRouter();
@@ -46,6 +54,8 @@ export default function TasksScreen() {
     null,
   );
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
+  const [sortType, setSortType] = useState<SortType>("default");
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
     visible: boolean;
@@ -92,40 +102,91 @@ export default function TasksScreen() {
     return chips;
   }, [projects, labels]);
 
+  // Sort function
+  const sortTasks = useCallback(
+    (tasksToSort: Task[], sort: SortType): Task[] => {
+      if (sort === "default") return tasksToSort;
+
+      return [...tasksToSort].sort((a, b) => {
+        switch (sort) {
+          case "priority":
+            // Higher priority first (1 is highest)
+            if (a.priority !== b.priority) return a.priority - b.priority;
+            // Then by date
+            if (a.dueDate && b.dueDate) {
+              return (
+                new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+              );
+            }
+            if (a.dueDate) return -1;
+            if (b.dueDate) return 1;
+            return 0;
+
+          case "date":
+            // Tasks with date first, sorted by date
+            if (a.dueDate && b.dueDate) {
+              return (
+                new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+              );
+            }
+            if (a.dueDate) return -1;
+            if (b.dueDate) return 1;
+            // Then by priority
+            return a.priority - b.priority;
+
+          case "name":
+            return a.title.localeCompare(b.title, "ru");
+
+          default:
+            return 0;
+        }
+      });
+    },
+    [],
+  );
+
   // Filter tasks based on active filter
   const filteredTasks = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    let result: Task[];
+
     switch (activeFilter) {
       case "upcoming":
-        return tasks
-          .filter((task) => {
-            if (!task.dueDate || task.completed) return false;
-            const dueDate = new Date(task.dueDate);
-            dueDate.setHours(0, 0, 0, 0);
-            return dueDate >= today;
-          })
-          .sort((a, b) => {
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return (
-              new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-            );
-          });
+        result = tasks.filter((task) => {
+          if (!task.dueDate || task.completed) return false;
+          const dueDate = new Date(task.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate >= today;
+        });
+        break;
 
       case "project":
-        if (!selectedProjectId) return tasks;
-        return tasks.filter((task) => task.projectId === selectedProjectId);
+        result = selectedProjectId
+          ? tasks.filter((task) => task.projectId === selectedProjectId)
+          : tasks;
+        break;
 
       case "label":
-        if (!selectedLabelId) return tasks;
-        return tasks.filter((task) => task.labels.includes(selectedLabelId));
+        result = selectedLabelId
+          ? tasks.filter((task) => task.labels.includes(selectedLabelId))
+          : tasks;
+        break;
 
       default:
-        return tasks;
+        result = tasks;
     }
-  }, [tasks, activeFilter, selectedProjectId, selectedLabelId]);
+
+    return sortTasks(result, sortType);
+  }, [
+    tasks,
+    activeFilter,
+    selectedProjectId,
+    selectedLabelId,
+    sortType,
+    sortTasks,
+  ]);
 
   // Group tasks by completion status
   const groupedTasks = useMemo(() => {
@@ -226,9 +287,68 @@ export default function TasksScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{getFilterTitle()}</Text>
-        <Text style={styles.count}>{groupedTasks.active.length} активных</Text>
+        <View>
+          <Text style={styles.title}>{getFilterTitle()}</Text>
+          <Text style={styles.count}>
+            {groupedTasks.active.length} активных
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.sortButton}
+          onPress={() => setShowSortMenu(!showSortMenu)}
+        >
+          <Ionicons
+            name={
+              (SORT_OPTIONS.find((o) => o.value === sortType)?.icon as any) ||
+              "swap-vertical"
+            }
+            size={20}
+            color={
+              sortType !== "default" ? COLORS.primary : COLORS.textSecondary
+            }
+          />
+        </TouchableOpacity>
       </View>
+
+      {/* Sort menu */}
+      {showSortMenu && (
+        <View style={styles.sortMenu}>
+          {SORT_OPTIONS.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortOption,
+                sortType === option.value && styles.sortOptionActive,
+              ]}
+              onPress={() => {
+                setSortType(option.value);
+                setShowSortMenu(false);
+              }}
+            >
+              <Ionicons
+                name={option.icon as any}
+                size={18}
+                color={
+                  sortType === option.value
+                    ? COLORS.primary
+                    : COLORS.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.sortOptionText,
+                  sortType === option.value && styles.sortOptionTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+              {sortType === option.value && (
+                <Ionicons name="checkmark" size={18} color={COLORS.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {/* Filter chips */}
       <ScrollView
@@ -377,6 +497,37 @@ const styles = StyleSheet.create({
   count: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
+  },
+  sortButton: {
+    padding: SPACING.sm,
+    borderRadius: 8,
+    backgroundColor: COLORS.surface,
+  },
+  sortMenu: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: SPACING.md,
+    borderRadius: 12,
+    padding: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  sortOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: SPACING.sm,
+    borderRadius: 8,
+    gap: SPACING.sm,
+  },
+  sortOptionActive: {
+    backgroundColor: COLORS.primary + "15",
+  },
+  sortOptionText: {
+    flex: 1,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+  },
+  sortOptionTextActive: {
+    color: COLORS.primary,
+    fontWeight: "500",
   },
   filtersContainer: {
     maxHeight: 50,
