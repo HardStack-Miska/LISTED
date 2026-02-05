@@ -1,6 +1,6 @@
-import * as SQLite from 'expo-sqlite';
-import { DATABASE_NAME, DATABASE_VERSION, MIGRATIONS } from './schema';
-import type { Page, Block, Workspace, BlockType } from '@/types';
+import * as SQLite from "expo-sqlite";
+import { DATABASE_NAME, DATABASE_VERSION, MIGRATIONS } from "./schema";
+import type { Page, Block, Workspace, BlockType } from "@/types";
 
 const generateId = (): string => {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -30,14 +30,18 @@ class DatabaseService {
   }
 
   private async runMigrations(): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.db) throw new Error("Database not initialized");
 
     const result = await this.db.getFirstAsync<{ user_version: number }>(
-      'PRAGMA user_version'
+      "PRAGMA user_version",
     );
     const currentVersion = result?.user_version ?? 0;
 
-    for (let version = currentVersion + 1; version <= DATABASE_VERSION; version++) {
+    for (
+      let version = currentVersion + 1;
+      version <= DATABASE_VERSION;
+      version++
+    ) {
       const migrations = MIGRATIONS[version];
       if (migrations) {
         for (const sql of migrations) {
@@ -54,8 +58,8 @@ class DatabaseService {
     if (workspaces.length === 0) {
       await this.createWorkspace({
         id: generateId(),
-        name: 'Мои заметки',
-        icon: '📝',
+        name: "Мои заметки",
+        icon: "📝",
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -72,7 +76,7 @@ class DatabaseService {
       icon: string | null;
       created_at: string;
       updated_at: string;
-    }>('SELECT * FROM workspaces ORDER BY created_at');
+    }>("SELECT * FROM workspaces ORDER BY created_at");
 
     return rows.map((row) => ({
       id: row.id,
@@ -92,7 +96,7 @@ class DatabaseService {
       workspace.name,
       workspace.icon ?? null,
       workspace.createdAt.toISOString(),
-      workspace.updatedAt.toISOString()
+      workspace.updatedAt.toISOString(),
     );
 
     return workspace;
@@ -111,8 +115,8 @@ class DatabaseService {
       created_at: string;
       updated_at: string;
     }>(
-      'SELECT * FROM pages WHERE workspace_id = ? ORDER BY updated_at DESC',
-      workspaceId
+      "SELECT * FROM pages WHERE workspace_id = ? ORDER BY updated_at DESC",
+      workspaceId,
     );
 
     return rows.map((row) => ({
@@ -137,7 +141,7 @@ class DatabaseService {
       workspace_id: string;
       created_at: string;
       updated_at: string;
-    }>('SELECT * FROM pages WHERE id = ?', id);
+    }>("SELECT * FROM pages WHERE id = ?", id);
 
     if (!row) return null;
 
@@ -152,7 +156,9 @@ class DatabaseService {
     };
   }
 
-  async createPage(page: Omit<Page, 'id' | 'createdAt' | 'updatedAt'>): Promise<Page> {
+  async createPage(
+    page: Omit<Page, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Page> {
     if (!this.db) await this.initDatabase();
 
     const now = new Date();
@@ -172,7 +178,7 @@ class DatabaseService {
       newPage.parentId ?? null,
       newPage.workspaceId,
       newPage.createdAt.toISOString(),
-      newPage.updatedAt.toISOString()
+      newPage.updatedAt.toISOString(),
     );
 
     return newPage;
@@ -185,31 +191,31 @@ class DatabaseService {
     const values: (string | null)[] = [];
 
     if (updates.title !== undefined) {
-      fields.push('title = ?');
+      fields.push("title = ?");
       values.push(updates.title);
     }
     if (updates.icon !== undefined) {
-      fields.push('icon = ?');
+      fields.push("icon = ?");
       values.push(updates.icon ?? null);
     }
     if (updates.parentId !== undefined) {
-      fields.push('parent_id = ?');
+      fields.push("parent_id = ?");
       values.push(updates.parentId ?? null);
     }
 
-    fields.push('updated_at = ?');
+    fields.push("updated_at = ?");
     values.push(new Date().toISOString());
     values.push(id);
 
     await this.db!.runAsync(
-      `UPDATE pages SET ${fields.join(', ')} WHERE id = ?`,
-      ...values
+      `UPDATE pages SET ${fields.join(", ")} WHERE id = ?`,
+      ...values,
     );
   }
 
   async deletePage(id: string): Promise<void> {
     if (!this.db) await this.initDatabase();
-    await this.db!.runAsync('DELETE FROM pages WHERE id = ?', id);
+    await this.db!.runAsync("DELETE FROM pages WHERE id = ?", id);
   }
 
   // Blocks
@@ -224,10 +230,7 @@ class DatabaseService {
       page_id: string;
       created_at: string;
       updated_at: string;
-    }>(
-      'SELECT * FROM blocks WHERE page_id = ? ORDER BY block_order',
-      pageId
-    );
+    }>("SELECT * FROM blocks WHERE page_id = ? ORDER BY block_order", pageId);
 
     return rows.map((row) => ({
       id: row.id,
@@ -240,7 +243,9 @@ class DatabaseService {
     }));
   }
 
-  async createBlock(block: Omit<Block, 'id' | 'createdAt' | 'updatedAt'>): Promise<Block> {
+  async createBlock(
+    block: Omit<Block, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Block> {
     if (!this.db) await this.initDatabase();
 
     const now = new Date();
@@ -260,7 +265,7 @@ class DatabaseService {
       newBlock.order,
       newBlock.pageId,
       newBlock.createdAt.toISOString(),
-      newBlock.updatedAt.toISOString()
+      newBlock.updatedAt.toISOString(),
     );
 
     return newBlock;
@@ -273,36 +278,36 @@ class DatabaseService {
     const values: (string | number | null)[] = [];
 
     if (updates.type !== undefined) {
-      fields.push('type = ?');
+      fields.push("type = ?");
       values.push(updates.type);
     }
     if (updates.data !== undefined) {
-      fields.push('data = ?');
+      fields.push("data = ?");
       values.push(JSON.stringify(updates.data));
     }
     if (updates.order !== undefined) {
-      fields.push('block_order = ?');
+      fields.push("block_order = ?");
       values.push(updates.order);
     }
 
-    fields.push('updated_at = ?');
+    fields.push("updated_at = ?");
     values.push(new Date().toISOString());
     values.push(id);
 
     await this.db!.runAsync(
-      `UPDATE blocks SET ${fields.join(', ')} WHERE id = ?`,
-      ...values
+      `UPDATE blocks SET ${fields.join(", ")} WHERE id = ?`,
+      ...values,
     );
   }
 
   async deleteBlock(id: string): Promise<void> {
     if (!this.db) await this.initDatabase();
-    await this.db!.runAsync('DELETE FROM blocks WHERE id = ?', id);
+    await this.db!.runAsync("DELETE FROM blocks WHERE id = ?", id);
   }
 
   async deleteBlocksByPageId(pageId: string): Promise<void> {
     if (!this.db) await this.initDatabase();
-    await this.db!.runAsync('DELETE FROM blocks WHERE page_id = ?', pageId);
+    await this.db!.runAsync("DELETE FROM blocks WHERE page_id = ?", pageId);
   }
 
   async saveBlocks(pageId: string, blocks: Block[]): Promise<void> {
@@ -310,7 +315,7 @@ class DatabaseService {
 
     // Удаляем старые блоки и вставляем новые в транзакции
     await this.db!.withTransactionAsync(async () => {
-      await this.db!.runAsync('DELETE FROM blocks WHERE page_id = ?', pageId);
+      await this.db!.runAsync("DELETE FROM blocks WHERE page_id = ?", pageId);
 
       for (const block of blocks) {
         const now = new Date().toISOString();
@@ -323,10 +328,42 @@ class DatabaseService {
           block.order,
           pageId,
           block.createdAt?.toISOString() ?? now,
-          now
+          now,
         );
       }
     });
+  }
+
+  async searchPages(workspaceId: string, query: string): Promise<Page[]> {
+    if (!this.db) await this.initDatabase();
+
+    const searchPattern = `%${query}%`;
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      title: string;
+      icon: string | null;
+      parent_id: string | null;
+      workspace_id: string;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT * FROM pages
+       WHERE workspace_id = ? AND title LIKE ?
+       ORDER BY updated_at DESC`,
+      workspaceId,
+      searchPattern,
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      icon: row.icon ?? undefined,
+      parentId: row.parent_id ?? undefined,
+      workspaceId: row.workspace_id,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    }));
   }
 }
 
