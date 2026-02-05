@@ -238,8 +238,15 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.label}>Дата</Text>
+      <View style={styles.selectedDate}>
+        <Ionicons
+          name="calendar"
+          size={16}
+          color={value ? COLORS.primary : COLORS.textSecondary}
+        />
+        <Text style={[styles.selectedDateText, !value && styles.noDateText]}>
+          {value ? formatDate(value) : "Не выбрана"}
+        </Text>
         {value && (
           <Pressable onPress={handleClearDate} style={styles.clearButton}>
             <Ionicons
@@ -250,13 +257,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
           </Pressable>
         )}
       </View>
-
-      {value && (
-        <View style={styles.selectedDate}>
-          <Ionicons name="calendar" size={16} color={COLORS.primary} />
-          <Text style={styles.selectedDateText}>{formatDate(value)}</Text>
-        </View>
-      )}
 
       <View style={styles.quickOptions}>
         {QUICK_OPTIONS.map((option) => (
@@ -301,19 +301,9 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SPACING.sm,
-  },
-  label: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "500",
-    color: COLORS.textSecondary,
-  },
   clearButton: {
     padding: SPACING.xs,
+    marginLeft: "auto",
   },
   selectedDate: {
     flexDirection: "row",
@@ -326,6 +316,10 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontWeight: "500",
     color: COLORS.primary,
+  },
+  noDateText: {
+    color: COLORS.textSecondary,
+    fontWeight: "400",
   },
   quickOptions: {
     flexDirection: "row",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,9 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
-  SafeAreaView,
   Pressable,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
@@ -21,7 +21,7 @@ import { SubtaskList } from "@/components/tasks/SubtaskList";
 import { DatePicker } from "@/components/tasks/DatePicker";
 import { ProjectPicker, ProjectPickerInline } from "@/components/projects";
 import { LabelPicker, LabelPickerInline } from "@/components/labels";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { HoldToDeleteButton } from "@/components/ui/HoldToDeleteButton";
 import type { Task, Priority } from "@/types";
 import { PRIORITY_COLORS } from "@/types/task";
 
@@ -46,7 +46,10 @@ export default function TaskDetailScreen() {
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Autosave refs
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     const loadTask = async () => {
@@ -71,14 +74,19 @@ export default function TaskDetailScreen() {
         Alert.alert("Ошибка", "Не удалось загрузить задачу");
       } finally {
         setIsLoading(false);
+        // Mark initial load complete after a short delay
+        setTimeout(() => {
+          isInitialLoadRef.current = false;
+        }, 100);
       }
     };
 
     loadTask();
   }, [id]);
 
-  const handleSave = useCallback(async () => {
-    if (!id || !title.trim()) return;
+  // Autosave function
+  const performSave = useCallback(async () => {
+    if (!id || !title.trim() || isInitialLoadRef.current) return;
 
     setIsSaving(true);
     try {
@@ -104,10 +112,10 @@ export default function TaskDetailScreen() {
         await removeLabelFromTask(id, labelId);
       }
 
-      router.back();
+      // Update local task state
+      setTask((prev) => (prev ? { ...prev, labels: selectedLabelIds } : null));
     } catch (error) {
       console.error("Error saving task:", error);
-      Alert.alert("Ошибка", "Не удалось сохранить задачу");
     } finally {
       setIsSaving(false);
     }
@@ -122,21 +130,34 @@ export default function TaskDetailScreen() {
     task,
     addLabelToTask,
     removeLabelFromTask,
-    router,
   ]);
 
-  const handleToggleComplete = useCallback(async () => {
-    if (!id) return;
+  // Debounced autosave effect
+  useEffect(() => {
+    if (isInitialLoadRef.current) return;
 
-    try {
-      await databaseService.toggleTaskComplete(id);
-      setTask((prev) =>
-        prev ? { ...prev, completed: !prev.completed } : null,
-      );
-    } catch (error) {
-      console.error("Error toggling task:", error);
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  }, [id]);
+
+    saveTimeoutRef.current = setTimeout(() => {
+      performSave();
+    }, 800);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [
+    title,
+    description,
+    priority,
+    dueDate,
+    projectId,
+    selectedLabelIds,
+    performSave,
+  ]);
 
   const handleDelete = useCallback(async () => {
     if (!id) return;
@@ -194,22 +215,22 @@ export default function TaskDetailScreen() {
   const handleLabelToggle = useCallback((labelId: string) => {
     setSelectedLabelIds((prev) =>
       prev.includes(labelId)
-        ? prev.filter((id) => id !== labelId)
+        ? prev.filter((lid) => lid !== labelId)
         : [...prev, labelId],
     );
   }, []);
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!task) {
     return (
-      <View style={styles.errorContainer}>
+      <SafeAreaView style={styles.errorContainer}>
         <Ionicons
           name="alert-circle-outline"
           size={48}
@@ -217,17 +238,17 @@ export default function TaskDetailScreen() {
         />
         <Text style={styles.errorText}>Задача не найдена</Text>
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.backButtonError}
           onPress={() => router.back()}
         >
           <Text style={styles.backButtonText}>Назад</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -235,46 +256,23 @@ export default function TaskDetailScreen() {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => setShowDeleteConfirm(true)}
-            style={styles.headerButton}
-          >
-            <Ionicons name="trash-outline" size={24} color={COLORS.danger} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-            disabled={isSaving || !title.trim()}
-          >
-            <Text style={styles.saveText}>
-              {isSaving ? "Сохранение..." : "Сохранить"}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {isSaving && (
+          <View style={styles.savingIndicator}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.savingText}>Сохранение...</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.titleRow}>
-          <TouchableOpacity
-            style={styles.checkbox}
-            onPress={handleToggleComplete}
-          >
-            <Ionicons
-              name={task.completed ? "checkbox" : "square-outline"}
-              size={28}
-              color={task.completed ? COLORS.primary : COLORS.textSecondary}
-            />
-          </TouchableOpacity>
-          <TextInput
-            style={[styles.titleInput, task.completed && styles.titleCompleted]}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Название задачи"
-            placeholderTextColor={COLORS.textSecondary}
-            multiline
-          />
-        </View>
+        <TextInput
+          style={styles.titleInput}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Название задачи"
+          placeholderTextColor={COLORS.textSecondary}
+          multiline
+        />
 
         <TextInput
           style={styles.descriptionInput}
@@ -316,8 +314,8 @@ export default function TaskDetailScreen() {
             </View>
           </TouchableOpacity>
 
-          <View style={styles.fieldRow}>
-            <View style={styles.fieldLeft}>
+          <View style={styles.dateSection}>
+            <View style={styles.dateLabelRow}>
               <Ionicons
                 name="calendar-outline"
                 size={20}
@@ -325,9 +323,7 @@ export default function TaskDetailScreen() {
               />
               <Text style={styles.fieldLabel}>Дата</Text>
             </View>
-            <View style={styles.datePickerWrapper}>
-              <DatePicker value={dueDate} onChange={setDueDate} />
-            </View>
+            <DatePicker value={dueDate} onChange={setDueDate} />
           </View>
 
           <ProjectPickerInline
@@ -350,6 +346,10 @@ export default function TaskDetailScreen() {
             onDelete={handleDeleteSubtask}
             onAdd={handleAddSubtask}
           />
+        </View>
+
+        <View style={styles.deleteSection}>
+          <HoldToDeleteButton onDelete={handleDelete} />
         </View>
       </ScrollView>
 
@@ -409,18 +409,7 @@ export default function TaskDetailScreen() {
         onToggle={handleLabelToggle}
         onClose={() => setShowLabelPicker(false)}
       />
-
-      <ConfirmDialog
-        visible={showDeleteConfirm}
-        title="Удалить задачу?"
-        message="Это действие нельзя отменить. Все подзадачи также будут удалены."
-        confirmText="Удалить"
-        cancelText="Отмена"
-        onConfirm={handleDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-        confirmStyle="destructive"
-      />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -451,7 +440,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginTop: SPACING.md,
   },
-  backButton: {
+  backButtonError: {
     marginTop: SPACING.lg,
     padding: SPACING.md,
   },
@@ -463,55 +452,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   headerButton: {
     padding: SPACING.sm,
   },
-  headerActions: {
+  savingIndicator: {
     flexDirection: "row",
     alignItems: "center",
-    gap: SPACING.sm,
+    gap: SPACING.xs,
+    paddingRight: SPACING.sm,
   },
-  saveButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: 8,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveText: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "600",
-    color: "#FFFFFF",
+  savingText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
   },
   content: {
     flex: 1,
     padding: SPACING.md,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: SPACING.md,
-  },
-  checkbox: {
-    marginRight: SPACING.sm,
-    marginTop: 2,
-  },
   titleInput: {
-    flex: 1,
     fontSize: FONT_SIZES.xl,
     fontWeight: "600",
     color: COLORS.text,
     padding: 0,
-  },
-  titleCompleted: {
-    textDecorationLine: "line-through",
-    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
   },
   descriptionInput: {
     fontSize: FONT_SIZES.md,
@@ -519,7 +487,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: SPACING.md,
-    minHeight: 100,
+    minHeight: 80,
     marginBottom: SPACING.lg,
   },
   section: {
@@ -558,6 +526,21 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
   },
+  dateSection: {
+    backgroundColor: COLORS.surface,
+    padding: SPACING.md,
+    borderRadius: 12,
+  },
+  dateLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  deleteSection: {
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.xl,
+  },
   pickerContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -594,9 +577,5 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FONT_SIZES.md,
     color: COLORS.text,
-  },
-  datePickerWrapper: {
-    flex: 1,
-    marginLeft: SPACING.md,
   },
 });
