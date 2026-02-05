@@ -764,6 +764,284 @@ class DatabaseService {
       order: row.label_order,
     }));
   }
+
+  // ==================== INLINE TASKS ====================
+
+  async createInlineTask(task: {
+    title: string;
+    priority?: number;
+    dueDate?: Date;
+    sourcePageId: string;
+    sourceBlockId: string;
+  }): Promise<{ id: string }> {
+    if (!this.db) await this.initDatabase();
+
+    const id = generateId();
+    const now = new Date().toISOString();
+
+    await this.db!.runAsync(
+      `INSERT INTO tasks (id, title, priority, due_date, source_page_id, source_block_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      task.title,
+      task.priority ?? 4,
+      task.dueDate?.toISOString() ?? null,
+      task.sourcePageId,
+      task.sourceBlockId,
+      now,
+      now,
+    );
+
+    return { id };
+  }
+
+  async getTasksByPageId(pageId: string): Promise<Task[]> {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      title: string;
+      description: string | null;
+      priority: number;
+      due_date: string | null;
+      due_time: string | null;
+      completed: number;
+      completed_at: string | null;
+      project_id: string | null;
+      parent_id: string | null;
+      source_page_id: string | null;
+      source_block_id: string | null;
+      task_order: number;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT * FROM tasks WHERE source_page_id = ? ORDER BY task_order ASC`,
+      pageId,
+    );
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const labels = await this.getTaskLabels(row.id);
+        return {
+          id: row.id,
+          title: row.title,
+          description: row.description ?? undefined,
+          priority: row.priority as 1 | 2 | 3 | 4,
+          dueDate: row.due_date ? new Date(row.due_date) : undefined,
+          dueTime: row.due_time ?? undefined,
+          completed: row.completed === 1,
+          completedAt: row.completed_at
+            ? new Date(row.completed_at)
+            : undefined,
+          projectId: row.project_id ?? undefined,
+          parentId: row.parent_id ?? undefined,
+          sourcePageId: row.source_page_id ?? undefined,
+          sourceBlockId: row.source_block_id ?? undefined,
+          labels,
+          order: row.task_order,
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at),
+        };
+      }),
+    );
+  }
+
+  async linkTaskToBlock(
+    taskId: string,
+    pageId: string,
+    blockId: string,
+  ): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    await this.db!.runAsync(
+      `UPDATE tasks SET source_page_id = ?, source_block_id = ?, updated_at = ? WHERE id = ?`,
+      pageId,
+      blockId,
+      new Date().toISOString(),
+      taskId,
+    );
+  }
+
+  // ==================== TEMPLATES ====================
+
+  async getTemplates(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      description?: string;
+      icon?: string;
+      content: string;
+      category: string;
+      isSystem: boolean;
+      order: number;
+    }>
+  > {
+    if (!this.db) await this.initDatabase();
+
+    const rows = await this.db!.getAllAsync<{
+      id: string;
+      name: string;
+      description: string | null;
+      icon: string | null;
+      content: string;
+      category: string;
+      is_system: number;
+      template_order: number;
+    }>("SELECT * FROM templates ORDER BY is_system DESC, template_order ASC");
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description ?? undefined,
+      icon: row.icon ?? undefined,
+      content: row.content,
+      category: row.category,
+      isSystem: row.is_system === 1,
+      order: row.template_order,
+    }));
+  }
+
+  async createTemplate(template: {
+    name: string;
+    description?: string;
+    icon?: string;
+    content: string;
+    category?: string;
+  }): Promise<{ id: string }> {
+    if (!this.db) await this.initDatabase();
+
+    const id = generateId();
+    const now = new Date().toISOString();
+
+    await this.db!.runAsync(
+      `INSERT INTO templates (id, name, description, icon, content, category, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      template.name,
+      template.description ?? null,
+      template.icon ?? null,
+      template.content,
+      template.category ?? "custom",
+      now,
+      now,
+    );
+
+    return { id };
+  }
+
+  async deleteTemplate(id: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    await this.db!.runAsync(
+      "DELETE FROM templates WHERE id = ? AND is_system = 0",
+      id,
+    );
+  }
+
+  async initSystemTemplates(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    // Check if system templates already exist
+    const existing = await this.db!.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) as count FROM templates WHERE is_system = 1",
+    );
+
+    if (existing && existing.count > 0) return;
+
+    const now = new Date().toISOString();
+
+    // Daily Note Template
+    const dailyNoteContent = JSON.stringify({
+      blocks: [
+        { type: "heading1", data: { text: "{{date}}" } },
+        { type: "heading2", data: { text: "Задачи на сегодня" } },
+        { type: "task", data: { text: "", priority: 2 } },
+        { type: "task", data: { text: "", priority: 3 } },
+        { type: "task", data: { text: "", priority: 4 } },
+        { type: "heading2", data: { text: "Заметки" } },
+        { type: "paragraph", data: { text: "" } },
+        { type: "heading2", data: { text: "Итоги дня" } },
+        { type: "paragraph", data: { text: "" } },
+      ],
+    });
+
+    await this.db!.runAsync(
+      `INSERT INTO templates (id, name, description, icon, content, category, is_system, template_order, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      "system_daily_note",
+      "Дневная заметка",
+      "Шаблон для ежедневного планирования и заметок",
+      "📅",
+      dailyNoteContent,
+      "productivity",
+      1,
+      0,
+      now,
+      now,
+    );
+
+    // Meeting Notes Template
+    const meetingContent = JSON.stringify({
+      blocks: [
+        { type: "heading1", data: { text: "Встреча: {{title}}" } },
+        { type: "paragraph", data: { text: "Дата: {{date}}" } },
+        { type: "paragraph", data: { text: "Участники: " } },
+        { type: "heading2", data: { text: "Повестка" } },
+        { type: "bulletList", data: { text: "" } },
+        { type: "heading2", data: { text: "Обсуждение" } },
+        { type: "paragraph", data: { text: "" } },
+        { type: "heading2", data: { text: "Решения и действия" } },
+        { type: "task", data: { text: "", priority: 2 } },
+        { type: "task", data: { text: "", priority: 3 } },
+      ],
+    });
+
+    await this.db!.runAsync(
+      `INSERT INTO templates (id, name, description, icon, content, category, is_system, template_order, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      "system_meeting",
+      "Заметки встречи",
+      "Шаблон для ведения протокола встреч",
+      "👥",
+      meetingContent,
+      "productivity",
+      1,
+      1,
+      now,
+      now,
+    );
+
+    // Project Template
+    const projectContent = JSON.stringify({
+      blocks: [
+        { type: "heading1", data: { text: "{{title}}" } },
+        { type: "heading2", data: { text: "Описание" } },
+        { type: "paragraph", data: { text: "" } },
+        { type: "heading2", data: { text: "Цели" } },
+        { type: "bulletList", data: { text: "" } },
+        { type: "heading2", data: { text: "Задачи" } },
+        { type: "task", data: { text: "", priority: 1 } },
+        { type: "task", data: { text: "", priority: 2 } },
+        { type: "task", data: { text: "", priority: 3 } },
+        { type: "heading2", data: { text: "Ресурсы" } },
+        { type: "paragraph", data: { text: "" } },
+      ],
+    });
+
+    await this.db!.runAsync(
+      `INSERT INTO templates (id, name, description, icon, content, category, is_system, template_order, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      "system_project",
+      "Проект",
+      "Шаблон для планирования проектов",
+      "🎯",
+      projectContent,
+      "productivity",
+      1,
+      2,
+      now,
+      now,
+    );
+  }
 }
 
 export const databaseService = DatabaseService.getInstance();

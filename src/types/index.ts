@@ -1,5 +1,7 @@
 // Базовые типы для приложения LISTED
 
+import type { Priority } from "./task";
+
 export type BlockType =
   | "paragraph"
   | "heading1"
@@ -8,6 +10,7 @@ export type BlockType =
   | "bulletList"
   | "numberedList"
   | "checkbox"
+  | "task"
   | "code"
   | "image"
   | "pageLink";
@@ -18,6 +21,11 @@ export interface BlockData {
   language?: string;
   imageUri?: string;
   linkedPageId?: string;
+  // Task block specific data
+  taskId?: string;
+  priority?: Priority;
+  dueDate?: string;
+  completed?: boolean;
 }
 
 export interface Block {

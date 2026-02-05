@@ -13,6 +13,8 @@ export interface Task {
   completedAt?: Date;
   projectId?: string;
   parentId?: string; // for subtasks
+  sourcePageId?: string; // for inline tasks - link to the page where task was created
+  sourceBlockId?: string; // for inline tasks - link to the block
   labels: string[];
   order: number;
   createdAt: Date;
@@ -54,15 +56,15 @@ export interface TaskGroup {
 
 // Priority colors matching Todoist
 export const PRIORITY_COLORS: Record<Priority, string> = {
-  1: '#d1453b', // Red - highest
-  2: '#eb8909', // Orange
-  3: '#246fe0', // Blue
-  4: '#808080', // Gray - lowest
+  1: "#d1453b", // Red - highest
+  2: "#eb8909", // Orange
+  3: "#246fe0", // Blue
+  4: "#808080", // Gray - lowest
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
-  1: 'Приоритет 1',
-  2: 'Приоритет 2',
-  3: 'Приоритет 3',
-  4: 'Приоритет 4',
+  1: "Приоритет 1",
+  2: "Приоритет 2",
+  3: "Приоритет 3",
+  4: "Приоритет 4",
 };

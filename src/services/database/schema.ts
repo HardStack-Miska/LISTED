@@ -1,5 +1,5 @@
 export const DATABASE_NAME = "listed.db";
-export const DATABASE_VERSION = 2;
+export const DATABASE_VERSION = 3;
 
 export const SCHEMA = {
   workspaces: `
@@ -97,7 +97,36 @@ export const INDEXES_V2 = [
   "CREATE INDEX IF NOT EXISTS idx_task_labels_label ON task_labels(label_id)",
 ];
 
+// Sprint 4: Templates and task-page linking
+export const SCHEMA_V3 = {
+  templates: `
+    CREATE TABLE IF NOT EXISTS templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      icon TEXT,
+      content TEXT NOT NULL,
+      category TEXT DEFAULT 'custom',
+      is_system INTEGER DEFAULT 0,
+      template_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `,
+};
+
+export const MIGRATIONS_V3 = [
+  // Add source_page_id and source_block_id to tasks for inline tasks
+  "ALTER TABLE tasks ADD COLUMN source_page_id TEXT REFERENCES pages(id) ON DELETE SET NULL",
+  "ALTER TABLE tasks ADD COLUMN source_block_id TEXT",
+  // Templates table
+  SCHEMA_V3.templates,
+  // Index for finding tasks by source page
+  "CREATE INDEX IF NOT EXISTS idx_tasks_source_page ON tasks(source_page_id)",
+];
+
 export const MIGRATIONS: Record<number, string[]> = {
   1: [SCHEMA.workspaces, SCHEMA.pages, SCHEMA.blocks, ...INDEXES],
   2: [SCHEMA_V2.tasks, SCHEMA_V2.labels, SCHEMA_V2.task_labels, ...INDEXES_V2],
+  3: MIGRATIONS_V3,
 };

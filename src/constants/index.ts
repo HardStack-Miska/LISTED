@@ -10,6 +10,7 @@ export const BLOCK_TYPES = {
   BULLET_LIST: "bulletList",
   NUMBERED_LIST: "numberedList",
   CHECKBOX: "checkbox",
+  TASK: "task",
   CODE: "code",
   IMAGE: "image",
   PAGE_LINK: "pageLink",

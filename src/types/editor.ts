@@ -55,6 +55,11 @@ export interface ExtendedBlockData {
   linkedPageTitle?: string;
   linkedPageIcon?: string;
   imageUri?: string;
+  // Task block specific
+  taskId?: string;
+  priority?: 1 | 2 | 3 | 4;
+  dueDate?: string;
+  completed?: boolean;
 }
 
 // Блок для редактора

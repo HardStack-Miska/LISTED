@@ -65,6 +65,15 @@ export const BLOCK_TYPE_CONFIGS: BlockTypeConfig[] = [
     category: "list",
   },
   {
+    type: BLOCK_TYPES.TASK,
+    label: "Задача",
+    icon: "flag",
+    shortcut: "/task ",
+    placeholder: "Новая задача...",
+    hasIndent: false,
+    category: "list",
+  },
+  {
     type: BLOCK_TYPES.CODE,
     label: "Код",
     icon: "code",
@@ -107,4 +116,6 @@ export const MARKDOWN_SHORTCUTS: Record<string, BlockType> = {
   "[] ": BLOCK_TYPES.CHECKBOX as BlockType,
   "[ ] ": BLOCK_TYPES.CHECKBOX as BlockType,
   "```": BLOCK_TYPES.CODE as BlockType,
+  "/task ": BLOCK_TYPES.TASK as BlockType,
+  "/t ": BLOCK_TYPES.TASK as BlockType,
 };

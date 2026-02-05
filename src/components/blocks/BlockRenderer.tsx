@@ -1,12 +1,13 @@
-import React from 'react';
-import { BLOCK_TYPES } from '@/constants';
-import { ParagraphBlock } from './ParagraphBlock';
-import { HeadingBlock } from './HeadingBlock';
-import { CheckboxBlock } from './CheckboxBlock';
-import { BulletListBlock } from './BulletListBlock';
-import { NumberedListBlock } from './NumberedListBlock';
-import { CodeBlock } from './CodeBlock';
-import type { BlockComponentProps } from '@/types/editor';
+import React from "react";
+import { BLOCK_TYPES } from "@/constants";
+import { ParagraphBlock } from "./ParagraphBlock";
+import { HeadingBlock } from "./HeadingBlock";
+import { CheckboxBlock } from "./CheckboxBlock";
+import { BulletListBlock } from "./BulletListBlock";
+import { NumberedListBlock } from "./NumberedListBlock";
+import { CodeBlock } from "./CodeBlock";
+import { TaskBlock } from "./TaskBlock";
+import type { BlockComponentProps } from "@/types/editor";
 
 interface BlockRendererProps extends BlockComponentProps {
   listNumber?: number;
@@ -35,6 +36,9 @@ export const BlockRenderer: React.FC<BlockRendererProps> = (props) => {
 
     case BLOCK_TYPES.CODE:
       return <CodeBlock {...props} />;
+
+    case BLOCK_TYPES.TASK:
+      return <TaskBlock {...props} />;
 
     default:
       return <ParagraphBlock {...props} />;
