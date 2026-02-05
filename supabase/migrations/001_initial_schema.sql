@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS task_labels (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   label_id UUID NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
+  owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   UNIQUE(task_id, label_id)
 );
 
@@ -78,6 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_parent ON projects(parent_id);
 CREATE INDEX IF NOT EXISTS idx_labels_owner ON labels(owner_id);
 CREATE INDEX IF NOT EXISTS idx_task_labels_task ON task_labels(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_labels_label ON task_labels(label_id);
+CREATE INDEX IF NOT EXISTS idx_task_labels_owner ON task_labels(owner_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_task ON reminders(task_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_owner ON reminders(owner_id);
 

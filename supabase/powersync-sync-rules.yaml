@@ -2,36 +2,11 @@
 # Deploy this in the PowerSync Dashboard
 
 bucket_definitions:
-  # User's tasks bucket
-  user_tasks:
-    # Each user gets their own bucket with their tasks
+  user_data:
     parameters: SELECT request.user_id() AS user_id
     data:
-      - SELECT * FROM tasks WHERE owner_id = bucket.user_id
-
-  # User's projects bucket
-  user_projects:
-    parameters: SELECT request.user_id() AS user_id
-    data:
-      - SELECT * FROM projects WHERE owner_id = bucket.user_id
-
-  # User's labels bucket
-  user_labels:
-    parameters: SELECT request.user_id() AS user_id
-    data:
-      - SELECT * FROM labels WHERE owner_id = bucket.user_id
-
-  # User's task_labels bucket
-  user_task_labels:
-    parameters: SELECT request.user_id() AS user_id
-    data:
-      - SELECT task_labels.*
-        FROM task_labels
-        JOIN tasks ON tasks.id = task_labels.task_id
-        WHERE tasks.owner_id = bucket.user_id
-
-  # User's reminders bucket
-  user_reminders:
-    parameters: SELECT request.user_id() AS user_id
-    data:
-      - SELECT * FROM reminders WHERE owner_id = bucket.user_id
+      - SELECT id, title, description, priority, due_date, due_time, completed, completed_at, project_id, parent_id, task_order, duration, recurrence, owner_id, created_at, updated_at FROM tasks WHERE owner_id = bucket.user_id
+      - SELECT id, name, color, icon, parent_id, project_order, owner_id, created_at, updated_at FROM projects WHERE owner_id = bucket.user_id
+      - SELECT id, name, color, label_order, owner_id FROM labels WHERE owner_id = bucket.user_id
+      - SELECT id, task_id, label_id, owner_id FROM task_labels WHERE owner_id = bucket.user_id
+      - SELECT id, task_id, reminder_time, reminder_type, relative_minutes, notification_id, triggered, owner_id, created_at FROM reminders WHERE owner_id = bucket.user_id
