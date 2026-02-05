@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
-import { databaseService } from '@/services/database';
-import type { Task, Priority } from '@/types';
+import { useState, useCallback, useEffect } from "react";
+import { databaseService } from "@/services/database";
+import type { Task, Priority } from "@/types";
 
 interface UseTasksResult {
   tasks: Task[];
@@ -14,13 +14,17 @@ interface UseTasksResult {
     dueDate?: Date;
     dueTime?: string;
     projectId?: string;
+    labels?: string[];
   }) => Promise<{ id: string }>;
+  toggleTask: (id: string) => Promise<void>;
   toggleComplete: (id: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
 }
 
-export const useTasks = (mode: 'today' | 'upcoming' | 'all' = 'all'): UseTasksResult => {
+export const useTasks = (
+  mode: "today" | "upcoming" | "all" = "all",
+): UseTasksResult => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,20 +37,23 @@ export const useTasks = (mode: 'today' | 'upcoming' | 'all' = 'all'): UseTasksRe
       let loadedTasks: Task[];
 
       switch (mode) {
-        case 'today':
+        case "today":
           loadedTasks = await databaseService.getTasksForToday();
           break;
-        case 'upcoming':
+        case "upcoming":
           loadedTasks = await databaseService.getTasksUpcoming();
           break;
+        case "all":
+          loadedTasks = await databaseService.searchTasks({});
+          break;
         default:
-          loadedTasks = await databaseService.getTasksUpcoming();
+          loadedTasks = await databaseService.searchTasks({});
       }
 
       setTasks(loadedTasks);
     } catch (err) {
-      setError('Не удалось загрузить задачи');
-      console.error('Error loading tasks:', err);
+      setError("Не удалось загрузить задачи");
+      console.error("Error loading tasks:", err);
     } finally {
       setIsLoading(false);
     }
@@ -57,18 +64,37 @@ export const useTasks = (mode: 'today' | 'upcoming' | 'all' = 'all'): UseTasksRe
     await loadTasks();
   }, [loadTasks]);
 
-  const createTask = useCallback(async (task: {
-    title: string;
-    description?: string;
-    priority?: Priority;
-    dueDate?: Date;
-    dueTime?: string;
-    projectId?: string;
-  }) => {
-    const result = await databaseService.createTask(task);
-    await loadTasks();
-    return result;
-  }, [loadTasks]);
+  const createTask = useCallback(
+    async (task: {
+      title: string;
+      description?: string;
+      priority?: Priority;
+      dueDate?: Date;
+      dueTime?: string;
+      projectId?: string;
+      labels?: string[];
+    }) => {
+      const result = await databaseService.createTask(task);
+      await loadTasks();
+      return result;
+    },
+    [loadTasks],
+  );
+
+  const toggleTask = useCallback(async (id: string) => {
+    await databaseService.toggleTaskComplete(id);
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === id
+          ? {
+              ...task,
+              completed: !task.completed,
+              completedAt: !task.completed ? new Date() : undefined,
+            }
+          : task,
+      ),
+    );
+  }, []);
 
   const toggleComplete = useCallback(async (id: string) => {
     await databaseService.toggleTaskComplete(id);
@@ -80,8 +106,8 @@ export const useTasks = (mode: 'today' | 'upcoming' | 'all' = 'all'): UseTasksRe
               completed: !task.completed,
               completedAt: !task.completed ? new Date() : undefined,
             }
-          : task
-      )
+          : task,
+      ),
     );
   }, []);
 
@@ -90,17 +116,20 @@ export const useTasks = (mode: 'today' | 'upcoming' | 'all' = 'all'): UseTasksRe
     setTasks((prev) => prev.filter((task) => task.id !== id));
   }, []);
 
-  const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
-    await databaseService.updateTask(id, {
-      title: updates.title,
-      description: updates.description,
-      priority: updates.priority,
-      dueDate: updates.dueDate ?? null,
-      dueTime: updates.dueTime ?? null,
-      projectId: updates.projectId ?? null,
-    });
-    await loadTasks();
-  }, [loadTasks]);
+  const updateTask = useCallback(
+    async (id: string, updates: Partial<Task>) => {
+      await databaseService.updateTask(id, {
+        title: updates.title,
+        description: updates.description,
+        priority: updates.priority,
+        dueDate: updates.dueDate ?? null,
+        dueTime: updates.dueTime ?? null,
+        projectId: updates.projectId ?? null,
+      });
+      await loadTasks();
+    },
+    [loadTasks],
+  );
 
   useEffect(() => {
     loadTasks();
@@ -112,6 +141,7 @@ export const useTasks = (mode: 'today' | 'upcoming' | 'all' = 'all'): UseTasksRe
     error,
     refresh,
     createTask,
+    toggleTask,
     toggleComplete,
     deleteTask,
     updateTask,

@@ -35,40 +35,58 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="upcoming"
+        name="tasks"
         options={{
-          title: "Предстоящие",
+          title: "Задачи",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="calendar"
-        options={{
-          title: "Календарь",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+            <Ionicons name="checkbox-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="notes"
         options={{
-          title: "Проекты",
+          title: "Заметки",
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="folder-outline" size={size} color={color} />
+            <Ionicons name="document-text-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Настройки",
+          title: "Ещё",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+            <Ionicons name="ellipsis-horizontal" size={size} color={color} />
           ),
+        }}
+      />
+      {/* Hidden screens - accessible via navigation but not in tab bar */}
+      <Tabs.Screen
+        name="upcoming"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="projects"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="labels"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
