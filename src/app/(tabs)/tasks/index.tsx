@@ -140,7 +140,7 @@ export default function TasksScreen() {
 
   const handleTaskPress = useCallback(
     (id: string) => {
-      router.push(`/tasks/${id}`);
+      router.push(`/task/${id}`);
     },
     [router],
   );

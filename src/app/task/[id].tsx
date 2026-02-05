@@ -18,6 +18,7 @@ import { COLORS, SPACING, FONT_SIZES } from "@/constants";
 import { databaseService } from "@/services/database";
 import { useProjects, useLabels } from "@/hooks";
 import { SubtaskList } from "@/components/tasks/SubtaskList";
+import { DatePicker } from "@/components/tasks/DatePicker";
 import { ProjectPicker, ProjectPickerInline } from "@/components/projects";
 import { LabelPicker, LabelPickerInline } from "@/components/labels";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -38,6 +39,7 @@ export default function TaskDetailScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>(4);
+  const [dueDate, setDueDate] = useState<Date | null>(null);
   const [projectId, setProjectId] = useState<string | undefined>();
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
 
@@ -57,6 +59,7 @@ export default function TaskDetailScreen() {
           setTitle(loadedTask.title);
           setDescription(loadedTask.description ?? "");
           setPriority(loadedTask.priority);
+          setDueDate(loadedTask.dueDate ?? null);
           setProjectId(loadedTask.projectId);
           setSelectedLabelIds(loadedTask.labels);
         }
@@ -83,6 +86,7 @@ export default function TaskDetailScreen() {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
+        dueDate: dueDate ?? null,
         projectId: projectId ?? null,
       });
 
@@ -112,6 +116,7 @@ export default function TaskDetailScreen() {
     title,
     description,
     priority,
+    dueDate,
     projectId,
     selectedLabelIds,
     task,
@@ -310,6 +315,20 @@ export default function TaskDetailScreen() {
               />
             </View>
           </TouchableOpacity>
+
+          <View style={styles.fieldRow}>
+            <View style={styles.fieldLeft}>
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={COLORS.textSecondary}
+              />
+              <Text style={styles.fieldLabel}>Дата</Text>
+            </View>
+            <View style={styles.datePickerWrapper}>
+              <DatePicker value={dueDate} onChange={setDueDate} />
+            </View>
+          </View>
 
           <ProjectPickerInline
             projects={projects}
@@ -575,5 +594,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FONT_SIZES.md,
     color: COLORS.text,
+  },
+  datePickerWrapper: {
+    flex: 1,
+    marginLeft: SPACING.md,
   },
 });

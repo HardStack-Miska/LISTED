@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,14 +12,14 @@ import {
   Platform,
   Keyboard,
   ScrollView,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, FONT_SIZES, UI_SIZES } from '@/constants';
-import { PriorityPicker } from './PriorityPicker';
-import { DatePicker } from './DatePicker';
-import type { Priority } from '@/types/task';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS, SPACING, FONT_SIZES, UI_SIZES } from "@/constants";
+import { PriorityPicker } from "./PriorityPicker";
+import { DatePicker } from "./DatePicker";
+import type { Priority } from "@/types/task";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const ANIMATION_DURATION = 300;
 
 interface Project {
@@ -48,11 +48,11 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
   projects = [],
   defaultProjectId = null,
 }) => {
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>(4);
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    defaultProjectId
+    defaultProjectId,
   );
   const [showProjectPicker, setShowProjectPicker] = useState(false);
 
@@ -95,7 +95,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
   }, [visible, fadeAnim, slideAnim]);
 
   const resetForm = useCallback(() => {
-    setTitle('');
+    setTitle("");
     setPriority(4);
     setDueDate(null);
     setSelectedProjectId(defaultProjectId);
@@ -111,16 +111,27 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
       return;
     }
 
+    // If no date selected, default to today
+    const finalDueDate = dueDate ?? new Date();
+
     onSubmit({
       title: title.trim(),
       priority,
-      dueDate,
+      dueDate: finalDueDate,
       projectId: selectedProjectId,
     });
 
     resetForm();
     onClose();
-  }, [title, priority, dueDate, selectedProjectId, onSubmit, onClose, resetForm]);
+  }, [
+    title,
+    priority,
+    dueDate,
+    selectedProjectId,
+    onSubmit,
+    onClose,
+    resetForm,
+  ]);
 
   const handleProjectSelect = useCallback((projectId: string | null) => {
     setSelectedProjectId(projectId);
@@ -171,7 +182,8 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
                 key={project.id}
                 style={({ pressed }) => [
                   styles.projectItem,
-                  selectedProjectId === project.id && styles.projectItemSelected,
+                  selectedProjectId === project.id &&
+                    styles.projectItemSelected,
                   pressed && styles.pressed,
                 ]}
                 onPress={() => handleProjectSelect(project.id)}
@@ -209,17 +221,14 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
     >
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
           <Pressable style={styles.overlayPressable} onPress={handleClose} />
         </Animated.View>
 
         <Animated.View
-          style={[
-            styles.container,
-            { transform: [{ translateY: slideAnim }] },
-          ]}
+          style={[styles.container, { transform: [{ translateY: slideAnim }] }]}
         >
           <View style={styles.handle} />
 
@@ -324,11 +333,11 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
 const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   overlayPressable: {
     flex: 1,
@@ -338,7 +347,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: SCREEN_HEIGHT * 0.85,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -349,14 +358,14 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: COLORS.border,
     borderRadius: 2,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginTop: SPACING.sm,
     marginBottom: SPACING.xs,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
@@ -367,7 +376,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
   },
   placeholder: {
@@ -390,7 +399,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: FONT_SIZES.sm,
-    fontWeight: '500',
+    fontWeight: "500",
     color: COLORS.textSecondary,
     marginBottom: SPACING.sm,
   },
@@ -398,8 +407,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   projectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: 8,
@@ -418,7 +427,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   chevron: {
-    marginLeft: 'auto',
+    marginLeft: "auto",
   },
   pressed: {
     opacity: 0.7,
@@ -431,9 +440,9 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
   },
   submitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: COLORS.primary,
     paddingVertical: SPACING.md,
     borderRadius: 8,
@@ -448,21 +457,21 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: FONT_SIZES.md,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.white,
   },
   projectPickerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   projectPickerContainer: {
     backgroundColor: COLORS.white,
     borderRadius: UI_SIZES.cardRadius,
     width: 280,
     maxHeight: 400,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
@@ -470,7 +479,7 @@ const styles = StyleSheet.create({
   },
   projectPickerTitle: {
     fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     padding: SPACING.md,
     borderBottomWidth: 1,
@@ -480,8 +489,8 @@ const styles = StyleSheet.create({
     maxHeight: 320,
   },
   projectItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: SPACING.md,
     gap: SPACING.sm,
   },
@@ -494,6 +503,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   checkIcon: {
-    marginLeft: 'auto',
+    marginLeft: "auto",
   },
 });

@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { COLORS, SPACING, FONT_SIZES } from "@/constants";
 import { useTasks } from "@/hooks/useTasks";
 import { useLabels } from "@/hooks/useLabels";
+import { useProjects } from "@/hooks/useProjects";
 import { TaskItem, QuickAddTask } from "@/components/tasks";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -26,6 +27,7 @@ export default function TodayScreen() {
   const { tasks, isLoading, refresh, toggleComplete, deleteTask, createTask } =
     useTasks("today");
   const { labels } = useLabels();
+  const { projects } = useProjects();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
@@ -48,7 +50,7 @@ export default function TodayScreen() {
 
   const handleTaskPress = useCallback(
     (id: string) => {
-      router.push(`/tasks/${id}`);
+      router.push(`/task/${id}`);
     },
     [router],
   );
@@ -230,6 +232,7 @@ export default function TodayScreen() {
         visible={showQuickAdd}
         onClose={() => setShowQuickAdd(false)}
         onSubmit={handleQuickAddSubmit}
+        projects={projects}
       />
       <ConfirmDialog
         visible={deleteDialog.visible}
