@@ -3,7 +3,10 @@
     "allow": [
       "WebFetch(domain:x.com)",
       "WebFetch(domain:habr.com)",
-      "mcp__acp__Bash"
+      "mcp__acp__Bash",
+      "Bash(npx tsc:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(git add:*)"
     ]
   }
 }

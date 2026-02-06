@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-02-05T23:53:26.138Z",
-  "projectRoot": "C:\\Users\\Honor\\Documents\\LISTED",
+  "timestamp": "2026-02-06T14:12:50.669Z",
+  "projectRoot": "/mnt/c/Users/Honor/Documents/LISTED",
   "structure": {
     "hasPackageJson": true,
     "hasTsConfig": true,
     "hasClaudeConfig": true,
     "hasClaudeFlow": true
   },
-  "scannedAt": 1770335606138
+  "scannedAt": 1770387170672
 }
