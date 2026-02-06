@@ -2,27 +2,6 @@
 
 export const APP_NAME = "LISTED";
 
-export const BLOCK_TYPES = {
-  PARAGRAPH: "paragraph",
-  HEADING1: "heading1",
-  HEADING2: "heading2",
-  HEADING3: "heading3",
-  BULLET_LIST: "bulletList",
-  NUMBERED_LIST: "numberedList",
-  CHECKBOX: "checkbox",
-  TASK: "task",
-  CODE: "code",
-  IMAGE: "image",
-  PAGE_LINK: "pageLink",
-} as const;
-
-export const DEFAULT_BLOCK_TYPE = BLOCK_TYPES.PARAGRAPH;
-
-export const DATABASE = {
-  NAME: "listed_db",
-  VERSION: 1,
-} as const;
-
 // Todoist-style colors
 export const COLORS_LIGHT = {
   primary: "#dc4c3e", // Todoist red

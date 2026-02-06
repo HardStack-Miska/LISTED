@@ -7,8 +7,6 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -16,12 +14,6 @@
       ],
       "@/components/*": [
         "src/components/*"
-      ],
-      "@/database/*": [
-        "src/database/*"
-      ],
-      "@/stores/*": [
-        "src/stores/*"
       ],
       "@/hooks/*": [
         "src/hooks/*"
