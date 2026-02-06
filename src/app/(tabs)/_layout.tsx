@@ -56,6 +56,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="analytics"
+        options={{
+          title: "Статистика",
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="stats-chart-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Ещё",
@@ -70,12 +80,6 @@ export default function TabsLayout() {
         name="upcoming"
         options={{
           href: null, // Hide from tab bar
-        }}
-      />
-      <Tabs.Screen
-        name="notes"
-        options={{
-          href: null,
         }}
       />
       <Tabs.Screen

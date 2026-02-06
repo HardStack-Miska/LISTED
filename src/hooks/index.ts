@@ -6,3 +6,4 @@ export { useDatabaseInit } from "./useDatabaseInit";
 export { usePageData } from "./usePageData";
 export { useProjects } from "./useProjects";
 export { useLabels } from "./useLabels";
+export { useAnalytics } from "./useAnalytics";
