@@ -39,7 +39,6 @@ export const useProjects = (): UseProjectsResult => {
       setProjects(data);
     } catch (err) {
       setError("Не удалось загрузить проекты");
-      console.error("Error loading projects:", err);
     } finally {
       setIsLoading(false);
     }

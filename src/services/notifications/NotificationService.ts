@@ -1,17 +1,32 @@
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import type { Reminder, Task } from "@/types";
+import Constants from "expo-constants";
+import type { Task } from "@/types";
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Only import notifications on native platforms (not in Expo Go for SDK 53+)
+let Notifications: typeof import("expo-notifications") | null = null;
+
+const isExpoGo = Constants.appOwnership === "expo";
+
+if (Platform.OS !== "web" && !isExpoGo) {
+  try {
+    Notifications = require("expo-notifications");
+  } catch {
+    Notifications = null;
+  }
+}
+
+// Configure notification behavior (only on native)
+if (Notifications) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 class NotificationService {
   private static instance: NotificationService;
@@ -27,6 +42,10 @@ class NotificationService {
   }
 
   async requestPermissions(): Promise<boolean> {
+    if (!Notifications || Platform.OS === "web") {
+      return false;
+    }
+
     const { status: existingStatus } =
       await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -55,6 +74,10 @@ class NotificationService {
     reminderTime: Date,
     reminderId: string,
   ): Promise<string | null> {
+    if (!Notifications || Platform.OS === "web") {
+      return null;
+    }
+
     if (!this.hasPermission) {
       const granted = await this.requestPermissions();
       if (!granted) return null;
@@ -111,10 +134,12 @@ class NotificationService {
   }
 
   async cancelReminder(notificationId: string): Promise<void> {
+    if (!Notifications || Platform.OS === "web") return;
     await Notifications.cancelScheduledNotificationAsync(notificationId);
   }
 
   async cancelAllTaskReminders(taskId: string): Promise<void> {
+    if (!Notifications || Platform.OS === "web") return;
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
 
     for (const notification of scheduled) {
@@ -126,7 +151,10 @@ class NotificationService {
     }
   }
 
-  async getScheduledReminders(): Promise<Notifications.NotificationRequest[]> {
+  async getScheduledReminders(): Promise<
+    Array<{ identifier: string; content: { data?: Record<string, unknown> } }>
+  > {
+    if (!Notifications || Platform.OS === "web") return [];
     return Notifications.getAllScheduledNotificationsAsync();
   }
 
@@ -149,6 +177,10 @@ class NotificationService {
     hour: number,
     minute: number,
   ): Promise<string | null> {
+    if (!Notifications || Platform.OS === "web") {
+      return null;
+    }
+
     if (!this.hasPermission) {
       const granted = await this.requestPermissions();
       if (!granted) return null;
@@ -181,15 +213,25 @@ class NotificationService {
 
   // Handle notification response (when user taps notification)
   addNotificationResponseListener(
-    callback: (response: Notifications.NotificationResponse) => void,
-  ): Notifications.Subscription {
+    callback: (response: {
+      notification: { request: { content: { data: Record<string, unknown> } } };
+    }) => void,
+  ): { remove: () => void } {
+    if (!Notifications || Platform.OS === "web") {
+      return { remove: () => {} };
+    }
     return Notifications.addNotificationResponseReceivedListener(callback);
   }
 
   // Handle notification received while app is open
   addNotificationReceivedListener(
-    callback: (notification: Notifications.Notification) => void,
-  ): Notifications.Subscription {
+    callback: (notification: {
+      request: { content: { data: Record<string, unknown> } };
+    }) => void,
+  ): { remove: () => void } {
+    if (!Notifications || Platform.OS === "web") {
+      return { remove: () => {} };
+    }
     return Notifications.addNotificationReceivedListener(callback);
   }
 }

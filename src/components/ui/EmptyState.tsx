@@ -1,8 +1,11 @@
-import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import { COLORS, SPACING, FONT_SIZES } from "@/constants";
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { SPACING, FONT_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 
 interface EmptyStateProps {
+  emoji?: string;
   title: string;
   description: string;
   actionLabel?: string;
@@ -10,14 +13,18 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
+  emoji = '📝',
   title,
   description,
   actionLabel,
   onAction,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.emoji}>📝</Text>
+      <Text style={styles.emoji}>{emoji}</Text>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
       {actionLabel && onAction && (
@@ -35,11 +42,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: SPACING.xl,
   },
   emoji: {
@@ -48,19 +55,19 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZES.xl,
-    fontWeight: "600",
-    color: COLORS.text,
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: SPACING.sm,
-    textAlign: "center",
+    textAlign: 'center',
   },
   description: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
-    textAlign: "center",
+    color: colors.textSecondary,
+    textAlign: 'center',
     marginBottom: SPACING.lg,
   },
   button: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
     borderRadius: 10,
@@ -69,8 +76,8 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   buttonText: {
-    color: COLORS.white,
+    color: colors.white,
     fontSize: FONT_SIZES.md,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });

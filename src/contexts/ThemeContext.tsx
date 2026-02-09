@@ -5,13 +5,13 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { useColorScheme } from "react-native";
+import { useColorScheme, ActivityIndicator, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS_LIGHT, COLORS_DARK } from "@/constants";
 
 type ThemeMode = "light" | "dark" | "system";
 
-type Colors = typeof COLORS_LIGHT | typeof COLORS_DARK;
+export type Colors = typeof COLORS_LIGHT | typeof COLORS_DARK;
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -39,8 +39,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
         if (savedMode && ["light", "dark", "system"].includes(savedMode)) {
           setModeState(savedMode as ThemeMode);
         }
-      } catch (error) {
-        console.error("Error loading theme:", error);
+      } catch {
+        // Theme loading failed, using default
       } finally {
         setIsLoaded(true);
       }
@@ -52,8 +52,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     setModeState(newMode);
     try {
       await AsyncStorage.setItem(THEME_STORAGE_KEY, newMode);
-    } catch (error) {
-      console.error("Error saving theme:", error);
+    } catch {
+      // Theme saving failed silently
     }
   }, []);
 
@@ -64,9 +64,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   // Get current colors
   const colors = isDark ? COLORS_DARK : COLORS_LIGHT;
 
-  // Don't render until theme is loaded to prevent flash
+  // Show minimal loading indicator until theme is loaded to prevent flash
   if (!isLoaded) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a2e' }}>
+        <ActivityIndicator size="small" color="#6366F1" />
+      </View>
+    );
   }
 
   return (

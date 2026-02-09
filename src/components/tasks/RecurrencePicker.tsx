@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, FONT_SIZES, UI_SIZES } from '@/constants';
+import { SPACING, FONT_SIZES, UI_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 import type { RecurrenceRule, RecurrenceType } from '@/types/task';
 
 interface RecurrencePickerProps {
@@ -84,18 +86,19 @@ const formatRecurrence = (rule: RecurrenceRule): string => {
 const areRulesEqual = (a: RecurrenceRule, b: RecurrenceRule): boolean => {
   if (a.type !== b.type || a.interval !== b.interval) return false;
 
-  if (a.daysOfWeek && b.daysOfWeek) {
-    if (a.daysOfWeek.length !== b.daysOfWeek.length) return false;
-    return a.daysOfWeek.every((d) => b.daysOfWeek?.includes(d));
-  }
+  const aDays = a.daysOfWeek ?? [];
+  const bDays = b.daysOfWeek ?? [];
 
-  return !a.daysOfWeek && !b.daysOfWeek;
+  if (aDays.length !== bDays.length) return false;
+  return aDays.every((d) => bDays.includes(d));
 };
 
 export const RecurrencePicker: React.FC<RecurrencePickerProps> = ({
   value,
   onChange,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [showPicker, setShowPicker] = useState(false);
 
   const handleSelect = useCallback((rule: RecurrenceRule) => {
@@ -113,14 +116,14 @@ export const RecurrencePicker: React.FC<RecurrencePickerProps> = ({
         <Text style={styles.label}>Повтор</Text>
         {value && (
           <Pressable onPress={handleClear} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={16} color={COLORS.textSecondary} />
+            <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
           </Pressable>
         )}
       </View>
 
       {value && (
         <View style={styles.selectedRecurrence}>
-          <Ionicons name="repeat" size={16} color={COLORS.primary} />
+          <Ionicons name="repeat" size={16} color={colors.primary} />
           <Text style={styles.selectedText}>{formatRecurrence(value)}</Text>
         </View>
       )}
@@ -135,7 +138,7 @@ export const RecurrencePicker: React.FC<RecurrencePickerProps> = ({
         <Ionicons
           name="repeat-outline"
           size={18}
-          color={COLORS.textSecondary}
+          color={colors.textSecondary}
         />
         <Text style={styles.addButtonText}>
           {value ? 'Изменить' : 'Добавить повтор'}
@@ -170,7 +173,7 @@ export const RecurrencePicker: React.FC<RecurrencePickerProps> = ({
                     <Ionicons
                       name={option.icon}
                       size={20}
-                      color={isSelected ? COLORS.primary : COLORS.textSecondary}
+                      color={isSelected ? colors.primary : colors.textSecondary}
                     />
                     <Text
                       style={[
@@ -184,7 +187,7 @@ export const RecurrencePicker: React.FC<RecurrencePickerProps> = ({
                       <Ionicons
                         name="checkmark"
                         size={20}
-                        color={COLORS.primary}
+                        color={colors.primary}
                         style={styles.checkIcon}
                       />
                     )}
@@ -199,7 +202,7 @@ export const RecurrencePicker: React.FC<RecurrencePickerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
   },
@@ -212,7 +215,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   clearButton: {
     padding: SPACING.xs,
@@ -226,7 +229,7 @@ const styles = StyleSheet.create({
   selectedText: {
     fontSize: FONT_SIZES.md,
     fontWeight: '500',
-    color: COLORS.primary,
+    color: colors.primary,
   },
   addButton: {
     flexDirection: 'row',
@@ -235,16 +238,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: SPACING.sm,
   },
   addButtonText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   pressed: {
     opacity: 0.7,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   overlay: {
     flex: 1,
@@ -253,7 +256,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pickerContainer: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.background,
     borderRadius: UI_SIZES.cardRadius,
     width: 300,
     maxHeight: 400,
@@ -262,7 +265,7 @@ const styles = StyleSheet.create({
   pickerTitle: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: SPACING.md,
     textAlign: 'center',
   },
@@ -277,15 +280,15 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   optionSelected: {
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
   },
   optionText: {
     flex: 1,
     fontSize: FONT_SIZES.md,
-    color: COLORS.text,
+    color: colors.text,
   },
   optionTextSelected: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '500',
   },
   checkIcon: {

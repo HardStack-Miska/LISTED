@@ -3,7 +3,6 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      ['@babel/plugin-proposal-decorators', { legacy: true }],
       [
         'module-resolver',
         {
@@ -11,8 +10,6 @@ module.exports = function (api) {
           alias: {
             '@': './src',
             '@/components': './src/components',
-            '@/database': './src/database',
-            '@/stores': './src/stores',
             '@/hooks': './src/hooks',
             '@/utils': './src/utils',
             '@/types': './src/types',

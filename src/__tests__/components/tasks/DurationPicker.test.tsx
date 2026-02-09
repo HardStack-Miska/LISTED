@@ -28,6 +28,7 @@ describe("DurationPicker", () => {
     );
 
     expect(getByText("Длительность")).toBeTruthy();
+    expect(getByText("Установить")).toBeTruthy();
   });
 
   it("should display formatted duration for minutes", async () => {
@@ -55,13 +56,14 @@ describe("DurationPicker", () => {
   });
 
   it("should open modal when pressed", async () => {
-    const { getByText } = await renderWithTheme(
+    const { getByText, getAllByText } = await renderWithTheme(
       <DurationPicker onChange={mockOnChange} />,
     );
 
-    fireEvent.press(getByText("Длительность"));
+    fireEvent.press(getByText("Установить"));
 
-    expect(getByText("Выберите длительность")).toBeTruthy();
+    // "Длительность" appears in both inline label and modal title
+    expect(getAllByText("Длительность").length).toBeGreaterThanOrEqual(2);
   });
 
   it("should show quick duration options in modal", async () => {
@@ -69,7 +71,7 @@ describe("DurationPicker", () => {
       <DurationPicker onChange={mockOnChange} />,
     );
 
-    fireEvent.press(getByText("Длительность"));
+    fireEvent.press(getByText("Установить"));
 
     expect(getByText("15 мин")).toBeTruthy();
     expect(getByText("30 мин")).toBeTruthy();
@@ -82,19 +84,19 @@ describe("DurationPicker", () => {
       <DurationPicker onChange={mockOnChange} />,
     );
 
-    fireEvent.press(getByText("Длительность"));
+    fireEvent.press(getByText("Установить"));
     const options = getAllByText("30 мин");
     fireEvent.press(options[0]!);
 
     expect(mockOnChange).toHaveBeenCalledWith(30);
   });
 
-  it("should show custom input section", async () => {
+  it("should show custom value button in modal", async () => {
     const { getByText } = await renderWithTheme(
       <DurationPicker onChange={mockOnChange} />,
     );
 
-    fireEvent.press(getByText("Длительность"));
+    fireEvent.press(getByText("Установить"));
 
     expect(getByText("Своё значение")).toBeTruthy();
   });

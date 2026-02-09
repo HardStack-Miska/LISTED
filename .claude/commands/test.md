@@ -23,9 +23,8 @@ npm test -- --watch
 ```
 __tests__/
 ├── components/     # Тесты компонентов
-├── database/       # Тесты WatermelonDB
-├── stores/         # Тесты Zustand stores
 ├── hooks/          # Тесты кастомных хуков
+├── services/       # Тесты сервисов
 └── utils/          # Тесты утилит
 ```
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, FONT_SIZES, UI_SIZES } from '@/constants';
+import { SPACING, FONT_SIZES, UI_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 import { notificationService } from '@/services/notifications';
 
 interface ReminderPickerProps {
@@ -30,6 +32,8 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
   onChange,
   hasDueDate,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [showPicker, setShowPicker] = useState(false);
 
   const handleSelect = useCallback((minutes: number) => {
@@ -44,8 +48,10 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
   const formatReminder = (minutes: number): string => {
     if (minutes === 0) return 'В срок';
     if (minutes < 60) return `За ${minutes} мин`;
-    if (minutes < 1440) return `За ${minutes / 60} ч`;
-    return `За ${minutes / 1440} дн`;
+    const hours = Math.round(minutes / 60);
+    if (minutes < 1440) return `За ${hours} ч`;
+    const days = Math.round(minutes / 1440);
+    return `За ${days} дн`;
   };
 
   if (!hasDueDate) {
@@ -65,14 +71,14 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
         <Text style={styles.label}>Напоминание</Text>
         {value !== null && (
           <Pressable onPress={handleClear} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={16} color={COLORS.textSecondary} />
+            <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
           </Pressable>
         )}
       </View>
 
       {value !== null && (
         <View style={styles.selectedReminder}>
-          <Ionicons name="notifications" size={16} color={COLORS.primary} />
+          <Ionicons name="notifications" size={16} color={colors.primary} />
           <Text style={styles.selectedText}>{formatReminder(value)}</Text>
         </View>
       )}
@@ -87,7 +93,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
         <Ionicons
           name="notifications-outline"
           size={18}
-          color={COLORS.textSecondary}
+          color={colors.textSecondary}
         />
         <Text style={styles.addButtonText}>
           {value !== null ? 'Изменить' : 'Добавить напоминание'}
@@ -119,7 +125,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                 <Ionicons
                   name={option.icon}
                   size={20}
-                  color={value === option.minutes ? COLORS.primary : COLORS.textSecondary}
+                  color={value === option.minutes ? colors.primary : colors.textSecondary}
                 />
                 <Text
                   style={[
@@ -133,7 +139,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
                   <Ionicons
                     name="checkmark"
                     size={20}
-                    color={COLORS.primary}
+                    color={colors.primary}
                     style={styles.checkIcon}
                   />
                 )}
@@ -146,7 +152,7 @@ export const ReminderPicker: React.FC<ReminderPickerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
   },
@@ -159,14 +165,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   clearButton: {
     padding: SPACING.xs,
   },
   disabledText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontStyle: 'italic',
   },
   selectedReminder: {
@@ -178,7 +184,7 @@ const styles = StyleSheet.create({
   selectedText: {
     fontSize: FONT_SIZES.md,
     fontWeight: '500',
-    color: COLORS.primary,
+    color: colors.primary,
   },
   addButton: {
     flexDirection: 'row',
@@ -187,16 +193,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: SPACING.sm,
   },
   addButtonText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   pressed: {
     opacity: 0.7,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   overlay: {
     flex: 1,
@@ -205,7 +211,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pickerContainer: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.background,
     borderRadius: UI_SIZES.cardRadius,
     width: 280,
     padding: SPACING.md,
@@ -213,7 +219,7 @@ const styles = StyleSheet.create({
   pickerTitle: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: SPACING.md,
     textAlign: 'center',
   },
@@ -225,15 +231,15 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   optionSelected: {
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
   },
   optionText: {
     flex: 1,
     fontSize: FONT_SIZES.md,
-    color: COLORS.text,
+    color: colors.text,
   },
   optionTextSelected: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '500',
   },
   checkIcon: {

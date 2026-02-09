@@ -3,7 +3,23 @@
     "allow": [
       "WebFetch(domain:x.com)",
       "WebFetch(domain:habr.com)",
-      "mcp__acp__Bash"
+      "mcp__acp__Bash",
+      "Bash(npx tsc:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(git add:*)",
+      "Bash(npx jest --passWithNoTests)",
+      "Bash(npx jest:*)",
+      "Bash(npx expo export:*)",
+      "Bash(npx expo start:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(node -e:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm view:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx expo install:*)",
+      "Bash(ls:*)",
+      "Bash(git status:*)"
     ]
   }
 }

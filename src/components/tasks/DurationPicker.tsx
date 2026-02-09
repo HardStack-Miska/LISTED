@@ -1,14 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   Modal,
-  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@/contexts/ThemeContext";
+import { SPACING, FONT_SIZES, UI_SIZES } from "@/constants";
+import { useTheme } from "@/contexts";
+import type { Colors } from "@/contexts";
+import { WheelColumn } from "./WheelColumn";
 
 interface DurationPickerProps {
   value?: number; // duration in minutes
@@ -26,310 +28,370 @@ const QUICK_DURATIONS = [
   { label: "4 часа", value: 240 },
 ];
 
+const DURATION_HOURS = Array.from({ length: 13 }, (_, i) =>
+  i.toString().padStart(2, '0'),
+);
+const DURATION_MINUTES = ['00', '15', '30', '45'];
+
+const formatDuration = (minutes: number): string => {
+  if (minutes < 60) {
+    return `${minutes} мин`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (mins === 0) {
+    return `${hours} ч`;
+  }
+  return `${hours} ч ${mins} мин`;
+};
+
 export const DurationPicker: React.FC<DurationPickerProps> = ({
   value,
   onChange,
 }) => {
   const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [customHours, setCustomHours] = useState("");
-  const [customMinutes, setCustomMinutes] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
+  const [customHourIndex, setCustomHourIndex] = useState(0);
+  const [customMinuteIndex, setCustomMinuteIndex] = useState(0);
 
-  const formatDuration = (minutes: number): string => {
-    if (minutes < 60) {
-      return `${minutes} мин`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (mins === 0) {
-      return `${hours} ч`;
-    }
-    return `${hours} ч ${mins} мин`;
-  };
+  const handleOpen = useCallback(() => {
+    setShowCustom(false);
+    setModalVisible(true);
+  }, []);
 
-  const handleQuickSelect = (duration: number) => {
+  const handleQuickSelect = useCallback((duration: number) => {
     onChange(duration);
     setModalVisible(false);
-  };
+  }, [onChange]);
 
-  const handleCustomDuration = () => {
-    const hours = parseInt(customHours, 10) || 0;
-    const minutes = parseInt(customMinutes, 10) || 0;
-    const totalMinutes = hours * 60 + minutes;
-
-    if (totalMinutes > 0) {
-      onChange(totalMinutes);
+  const handleShowCustom = useCallback(() => {
+    if (value) {
+      const h = Math.min(Math.floor(value / 60), 12);
+      const m = value % 60;
+      setCustomHourIndex(h);
+      const mIdx = DURATION_MINUTES.findIndex((v) => parseInt(v, 10) >= m);
+      setCustomMinuteIndex(mIdx >= 0 ? mIdx : 0);
+    } else {
+      setCustomHourIndex(1);
+      setCustomMinuteIndex(0);
     }
-    setCustomHours("");
-    setCustomMinutes("");
-    setModalVisible(false);
-  };
+    setShowCustom(true);
+  }, [value]);
 
-  const handleClear = () => {
+  const handleCustomConfirm = useCallback(() => {
+    const hours = parseInt(DURATION_HOURS[customHourIndex] ?? '0', 10);
+    const minutes = parseInt(DURATION_MINUTES[customMinuteIndex] ?? '0', 10);
+    const total = hours * 60 + minutes;
+    if (total > 0) {
+      onChange(total);
+    }
+    setModalVisible(false);
+    setShowCustom(false);
+  }, [customHourIndex, customMinuteIndex, onChange]);
+
+  const handleClear = useCallback(() => {
     onChange(undefined);
     setModalVisible(false);
-  };
+  }, [onChange]);
+
+  const handleClose = useCallback(() => {
+    setModalVisible(false);
+    setShowCustom(false);
+  }, []);
 
   return (
-    <>
-      <TouchableOpacity
-        style={[
-          styles.button,
-          {
-            backgroundColor: value ? colors.primaryLight : colors.surface,
-            borderColor: value ? colors.primary : colors.border,
-          },
-        ]}
-        onPress={() => setModalVisible(true)}
-      >
-        <Ionicons
-          name="time-outline"
-          size={18}
-          color={value ? colors.primary : colors.textSecondary}
-        />
-        <Text
-          style={[
-            styles.buttonText,
-            { color: value ? colors.primary : colors.textSecondary },
-          ]}
-        >
-          {value ? formatDuration(value) : "Длительность"}
-        </Text>
-        {value && (
-          <TouchableOpacity
-            onPress={(e) => {
-              e.stopPropagation();
-              onChange(undefined);
-            }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="close-circle" size={16} color={colors.primary} />
-          </TouchableOpacity>
-        )}
-      </TouchableOpacity>
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <View style={styles.left}>
+          <Ionicons
+            name="hourglass-outline"
+            size={20}
+            color={colors.textSecondary}
+          />
+          <Text style={styles.label}>Длительность</Text>
+        </View>
+        <View style={styles.right}>
+          {value ? (
+            <>
+              <Pressable onPress={handleOpen} style={styles.valueButton}>
+                <Text style={styles.valueText}>{formatDuration(value)}</Text>
+              </Pressable>
+              <Pressable onPress={() => onChange(undefined)} hitSlop={8}>
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              onPress={handleOpen}
+              style={({ pressed }) => [
+                styles.setButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.setButtonText}>Установить</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
 
       <Modal
         visible={modalVisible}
         animationType="fade"
         transparent
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={handleClose}
       >
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setModalVisible(false)}
-        >
-          <View
-            style={[styles.modal, { backgroundColor: colors.surface }]}
-            onStartShouldSetResponder={() => true}
-          >
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.title, { color: colors.text }]}>
-                Выберите длительность
+        <Pressable style={styles.overlay} onPress={handleClose}>
+          <Pressable style={styles.modal} onPress={() => {}}>
+            <View style={styles.header}>
+              <Text style={styles.title}>
+                {showCustom ? 'Своё значение' : 'Длительность'}
               </Text>
-              {value && (
-                <TouchableOpacity onPress={handleClear}>
-                  <Text style={[styles.clearText, { color: colors.danger }]}>
-                    Очистить
-                  </Text>
-                </TouchableOpacity>
+              {value && !showCustom && (
+                <Pressable onPress={handleClear}>
+                  <Text style={styles.clearText}>Очистить</Text>
+                </Pressable>
               )}
             </View>
 
-            <View style={styles.quickOptions}>
-              {QUICK_DURATIONS.map((duration) => (
-                <TouchableOpacity
-                  key={duration.value}
-                  style={[
-                    styles.quickOption,
-                    {
-                      backgroundColor:
-                        value === duration.value
-                          ? colors.primary
-                          : colors.border,
-                    },
-                  ]}
-                  onPress={() => handleQuickSelect(duration.value)}
-                >
-                  <Text
-                    style={[
-                      styles.quickOptionText,
-                      {
-                        color:
-                          value === duration.value ? "#fff" : colors.text,
-                      },
-                    ]}
-                  >
-                    {duration.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {showCustom ? (
+              <>
+                <View style={styles.wheelsRow}>
+                  <View style={styles.wheelLabel}>
+                    <WheelColumn
+                      items={DURATION_HOURS}
+                      selectedIndex={customHourIndex}
+                      onSelect={setCustomHourIndex}
+                    />
+                    <Text style={styles.wheelUnit}>часов</Text>
+                  </View>
+                  <Text style={styles.wheelSeparator}>:</Text>
+                  <View style={styles.wheelLabel}>
+                    <WheelColumn
+                      items={DURATION_MINUTES}
+                      selectedIndex={customMinuteIndex}
+                      onSelect={setCustomMinuteIndex}
+                    />
+                    <Text style={styles.wheelUnit}>минут</Text>
+                  </View>
+                </View>
 
-            <View
-              style={[styles.customSection, { borderTopColor: colors.border }]}
-            >
-              <Text style={[styles.customLabel, { color: colors.text }]}>
-                Своё значение
-              </Text>
-              <View style={styles.customInputs}>
-                <View style={styles.customInputGroup}>
-                  <TextInput
-                    style={[
-                      styles.customInput,
-                      {
-                        backgroundColor: colors.background,
-                        color: colors.text,
-                        borderColor: colors.border,
-                      },
-                    ]}
-                    value={customHours}
-                    onChangeText={setCustomHours}
-                    keyboardType="number-pad"
-                    placeholder="0"
-                    placeholderTextColor={colors.textSecondary}
-                    maxLength={2}
-                  />
-                  <Text
-                    style={[styles.inputLabel, { color: colors.textSecondary }]}
-                  >
-                    часов
-                  </Text>
+                <View style={styles.footer}>
+                  <Pressable style={styles.cancelButton} onPress={() => setShowCustom(false)}>
+                    <Text style={styles.cancelText}>Назад</Text>
+                  </Pressable>
+                  <Pressable style={styles.confirmButton} onPress={handleCustomConfirm}>
+                    <Text style={styles.confirmText}>Готово</Text>
+                  </Pressable>
                 </View>
-                <View style={styles.customInputGroup}>
-                  <TextInput
-                    style={[
-                      styles.customInput,
-                      {
-                        backgroundColor: colors.background,
-                        color: colors.text,
-                        borderColor: colors.border,
-                      },
-                    ]}
-                    value={customMinutes}
-                    onChangeText={setCustomMinutes}
-                    keyboardType="number-pad"
-                    placeholder="0"
-                    placeholderTextColor={colors.textSecondary}
-                    maxLength={2}
-                  />
-                  <Text
-                    style={[styles.inputLabel, { color: colors.textSecondary }]}
-                  >
-                    минут
-                  </Text>
+              </>
+            ) : (
+              <>
+                <View style={styles.quickOptions}>
+                  {QUICK_DURATIONS.map((dur) => (
+                    <Pressable
+                      key={dur.value}
+                      style={[
+                        styles.quickOption,
+                        value === dur.value && styles.quickOptionSelected,
+                      ]}
+                      onPress={() => handleQuickSelect(dur.value)}
+                    >
+                      <Text
+                        style={[
+                          styles.quickOptionText,
+                          value === dur.value && styles.quickOptionTextSelected,
+                        ]}
+                      >
+                        {dur.label}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </View>
-                <TouchableOpacity
-                  style={[
-                    styles.applyButton,
-                    { backgroundColor: colors.primary },
-                  ]}
-                  onPress={handleCustomDuration}
-                >
-                  <Ionicons name="checkmark" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
+
+                <View style={styles.customTrigger}>
+                  <Pressable style={styles.customButton} onPress={handleShowCustom}>
+                    <Ionicons name="options-outline" size={18} color={colors.primary} />
+                    <Text style={styles.customButtonText}>Своё значение</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
       </Modal>
-    </>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 6,
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modal: {
-    width: "100%",
-    maxWidth: 360,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  clearText: {
-    fontSize: 14,
-  },
-  quickOptions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 12,
-    gap: 8,
-  },
-  quickOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  quickOptionText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  customSection: {
-    padding: 16,
-    borderTopWidth: 1,
-  },
-  customLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 12,
-  },
-  customInputs: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  customInputGroup: {
-    alignItems: "center",
-  },
-  customInput: {
-    width: 60,
-    height: 44,
-    borderWidth: 1,
-    borderRadius: 8,
-    textAlign: "center",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  inputLabel: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  applyButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: "auto",
-  },
-});
+const createStyles = (colors: Colors) =>
+  StyleSheet.create({
+    container: {
+      marginTop: SPACING.sm,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    left: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+    },
+    right: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+    },
+    label: {
+      fontSize: FONT_SIZES.md,
+      color: colors.text,
+    },
+    valueButton: {
+      backgroundColor: colors.primary + '15',
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.xs,
+      borderRadius: 8,
+    },
+    valueText: {
+      fontSize: FONT_SIZES.md,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    setButton: {
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.xs,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    setButtonText: {
+      fontSize: FONT_SIZES.sm,
+      color: colors.textSecondary,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modal: {
+      backgroundColor: colors.background,
+      borderRadius: UI_SIZES.cardRadius,
+      padding: SPACING.md,
+      width: 300,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: SPACING.md,
+    },
+    title: {
+      fontSize: FONT_SIZES.lg,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    clearText: {
+      fontSize: FONT_SIZES.sm,
+      color: colors.error,
+    },
+    quickOptions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: SPACING.sm,
+    },
+    quickOption: {
+      paddingHorizontal: 14,
+      paddingVertical: SPACING.sm,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+    },
+    quickOptionSelected: {
+      backgroundColor: colors.primary,
+    },
+    quickOptionText: {
+      fontSize: FONT_SIZES.sm,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    quickOptionTextSelected: {
+      color: colors.white,
+    },
+    customTrigger: {
+      marginTop: SPACING.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: SPACING.md,
+    },
+    customButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: SPACING.xs,
+      paddingVertical: SPACING.sm,
+    },
+    customButtonText: {
+      fontSize: FONT_SIZES.md,
+      color: colors.primary,
+      fontWeight: '500',
+    },
+    wheelsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginVertical: SPACING.sm,
+    },
+    wheelLabel: {
+      alignItems: 'center',
+    },
+    wheelSeparator: {
+      fontSize: FONT_SIZES.xl,
+      fontWeight: '700',
+      color: colors.text,
+      marginHorizontal: SPACING.sm,
+    },
+    wheelUnit: {
+      fontSize: FONT_SIZES.xs,
+      color: colors.textSecondary,
+      marginTop: SPACING.xs,
+    },
+    footer: {
+      flexDirection: 'row',
+      gap: SPACING.sm,
+      marginTop: SPACING.md,
+    },
+    cancelButton: {
+      flex: 1,
+      paddingVertical: SPACING.sm,
+      alignItems: 'center',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cancelText: {
+      fontSize: FONT_SIZES.md,
+      color: colors.textSecondary,
+    },
+    confirmButton: {
+      flex: 1,
+      paddingVertical: SPACING.sm,
+      alignItems: 'center',
+      borderRadius: 8,
+      backgroundColor: colors.primary,
+    },
+    confirmText: {
+      fontSize: FONT_SIZES.md,
+      fontWeight: '600',
+      color: colors.white,
+    },
+  });

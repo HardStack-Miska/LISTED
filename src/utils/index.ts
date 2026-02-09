@@ -1,5 +1,14 @@
 // Utility functions exports
-// Add utility exports here as they are created
+export { getNextOccurrenceDate } from './recurrence';
+export {
+  groupTasksByDate,
+  filterOverdueTasks,
+  filterTodayTasks,
+  filterCompletedTasks,
+  formatDayName,
+  getStartOfDay,
+  isSameDay,
+} from './dateFilters';
 
 export const generateId = (): string => {
   return Math.random().toString(36).substring(2, 15) +

@@ -1,9 +1,12 @@
-import React, { useCallback, useMemo } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS, SPACING, FONT_SIZES } from "@/constants";
-import type { Task, Priority, Label, Project } from "@/types/task";
-import { PRIORITY_COLORS } from "@/types/task";
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler';
+import { SPACING, FONT_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
+import type { Task, Priority, Label, Project } from '@/types/task';
+import { PRIORITY_COLORS } from '@/types/task';
 
 interface TaskItemProps {
   task: Task;
@@ -31,27 +34,27 @@ const formatDueDate = (date: Date, completed: boolean): string => {
   const isToday = date.toDateString() === today.toDateString();
   const isTomorrow = date.toDateString() === tomorrow.toDateString();
 
-  if (isToday) return "Сегодня";
-  if (isTomorrow) return "Завтра";
-  if (isOverdue(date, completed)) return "Просрочено";
+  if (isToday) return 'Сегодня';
+  if (isTomorrow) return 'Завтра';
+  if (isOverdue(date, completed)) return 'Просрочено';
 
   const options: Intl.DateTimeFormatOptions = {
-    day: "numeric",
-    month: "short",
+    day: 'numeric',
+    month: 'short',
   };
-  return date.toLocaleDateString("ru-RU", options);
+  return date.toLocaleDateString('ru-RU', options);
 };
 
-const getDueDateColor = (date: Date, completed: boolean): string => {
-  if (completed) return COLORS.textSecondary;
+const getDueDateColor = (date: Date, completed: boolean, colors: Colors): string => {
+  if (completed) return colors.textSecondary;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueDay = new Date(date);
   dueDay.setHours(0, 0, 0, 0);
 
-  if (dueDay < today) return COLORS.error;
-  if (dueDay.getTime() === today.getTime()) return COLORS.primary;
-  return COLORS.textSecondary;
+  if (dueDay < today) return colors.error;
+  if (dueDay.getTime() === today.getTime()) return colors.primary;
+  return colors.textSecondary;
 };
 
 export const TaskItem: React.FC<TaskItemProps> = ({
@@ -62,6 +65,9 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   allLabels = [],
   projects = [],
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const handleToggle = useCallback(() => {
     onToggleComplete(task.id);
   }, [task.id, onToggleComplete]);
@@ -92,8 +98,50 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const showPriorityFlag = task.priority < 4;
   const taskIsOverdue = task.dueDate && isOverdue(task.dueDate, task.completed);
 
+  const renderLeftActions = useCallback(
+    (progress: Animated.AnimatedInterpolation<number>) => {
+      if (task.completed) return null;
+
+      return (
+        <View style={styles.leftAction}>
+          <Ionicons name="checkmark-circle" size={24} color={colors.white} />
+        </View>
+      );
+    },
+    [task.completed, colors.white, styles.leftAction]
+  );
+
+  const renderRightActions = useCallback(
+    (progress: Animated.AnimatedInterpolation<number>) => {
+      return (
+        <View style={styles.rightAction}>
+          <Ionicons name="trash" size={24} color={colors.white} />
+        </View>
+      );
+    },
+    [colors.white, styles.rightAction]
+  );
+
+  const handleSwipeableLeftOpen = useCallback(() => {
+    if (!task.completed) {
+      onToggleComplete(task.id);
+    }
+  }, [task.completed, task.id, onToggleComplete]);
+
+  const handleSwipeableRightOpen = useCallback(() => {
+    onLongPress?.(task.id);
+  }, [task.id, onLongPress]);
+
   return (
-    <Pressable
+    <Swipeable
+      renderLeftActions={renderLeftActions}
+      renderRightActions={renderRightActions}
+      onSwipeableLeftOpen={handleSwipeableLeftOpen}
+      onSwipeableRightOpen={handleSwipeableRightOpen}
+      overshootLeft={false}
+      overshootRight={false}
+    >
+      <Pressable
       style={({ pressed }) => [
         styles.container,
         pressed && styles.pressed,
@@ -112,7 +160,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         {task.completed && (
-          <Ionicons name="checkmark" size={14} color={COLORS.white} />
+          <Ionicons name="checkmark" size={14} color={colors.white} />
         )}
       </Pressable>
 
@@ -124,7 +172,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           {task.title}
         </Text>
 
-        {(task.dueDate || task.description) && (
+        {(task.dueDate || task.description || taskProject || taskLabels.length > 0) && (
           <View style={styles.meta}>
             {task.dueDate && (
               <View
@@ -134,14 +182,14 @@ export const TaskItem: React.FC<TaskItemProps> = ({
                 ]}
               >
                 <Ionicons
-                  name={taskIsOverdue ? "alert-circle" : "calendar-outline"}
+                  name={taskIsOverdue ? 'alert-circle' : 'calendar-outline'}
                   size={12}
-                  color={getDueDateColor(task.dueDate, task.completed)}
+                  color={getDueDateColor(task.dueDate, task.completed, colors)}
                 />
                 <Text
                   style={[
                     styles.dueDate,
-                    { color: getDueDateColor(task.dueDate, task.completed) },
+                    { color: getDueDateColor(task.dueDate, task.completed, colors) },
                     taskIsOverdue && styles.overdueText,
                   ]}
                 >
@@ -172,7 +220,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
                     key={label.id}
                     style={[
                       styles.label,
-                      { backgroundColor: label.color + "20" },
+                      { backgroundColor: label.color + '20' },
                     ]}
                   >
                     <View
@@ -205,68 +253,69 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           style={styles.priorityFlag}
         />
       )}
-    </Pressable>
+      </Pressable>
+    </Swipeable>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   overdueContainer: {
-    backgroundColor: COLORS.error + "08",
+    backgroundColor: colors.error + '08',
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.error,
+    borderLeftColor: colors.error,
   },
   pressed: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: SPACING.md,
     marginTop: 2,
   },
   checkboxCompleted: {
-    backgroundColor: COLORS.textSecondary,
-    borderColor: COLORS.textSecondary,
+    backgroundColor: colors.textSecondary,
+    borderColor: colors.textSecondary,
   },
   content: {
     flex: 1,
   },
   title: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.text,
+    color: colors.text,
     lineHeight: 22,
   },
   titleCompleted: {
-    textDecorationLine: "line-through",
-    color: COLORS.textSecondary,
+    textDecorationLine: 'line-through',
+    color: colors.textSecondary,
   },
   meta: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: SPACING.xs,
-    flexWrap: "wrap",
+    flexWrap: 'wrap',
     gap: SPACING.sm,
   },
   dueDateContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
   },
   overdueBadge: {
-    backgroundColor: COLORS.error + "15",
+    backgroundColor: colors.error + '15',
     paddingHorizontal: SPACING.xs,
     paddingVertical: 2,
     borderRadius: 4,
@@ -275,11 +324,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
   },
   overdueText: {
-    fontWeight: "600",
+    fontWeight: '600',
   },
   projectContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
   },
   projectDot: {
@@ -289,17 +338,17 @@ const styles = StyleSheet.create({
   },
   projectName: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
-    maxWidth: 100,
+    color: colors.textSecondary,
+    flexShrink: 1,
   },
   labelsContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: SPACING.xs,
-    flexWrap: "wrap",
+    flexWrap: 'wrap',
   },
   label: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: SPACING.xs,
     paddingVertical: 2,
     borderRadius: 4,
@@ -312,15 +361,27 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontSize: FONT_SIZES.xs,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   moreLabels: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginLeft: 2,
   },
   priorityFlag: {
     marginLeft: SPACING.sm,
     marginTop: 2,
+  },
+  leftAction: {
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+  },
+  rightAction: {
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
   },
 });

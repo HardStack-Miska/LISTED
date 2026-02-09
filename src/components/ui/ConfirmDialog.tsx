@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,9 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import { COLORS, SPACING, FONT_SIZES, UI_SIZES } from '@/constants';
+import { SPACING, FONT_SIZES, UI_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 
 interface ConfirmDialogProps {
   visible: boolean;
@@ -35,6 +37,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
@@ -143,7 +148,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -155,7 +160,7 @@ const styles = StyleSheet.create({
   },
   dialog: {
     width: DIALOG_WIDTH,
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.white,
     borderRadius: UI_SIZES.cardRadius,
     shadowColor: '#000',
     shadowOffset: {
@@ -173,20 +178,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.text,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: SPACING.xs,
   },
   message: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
   buttons: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   button: {
     flex: 1,
@@ -195,11 +200,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonPressed: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   cancelButton: {
     borderRightWidth: 1,
-    borderRightColor: COLORS.border,
+    borderRightColor: colors.border,
   },
   confirmButton: {
     backgroundColor: 'transparent',
@@ -210,14 +215,14 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: FONT_SIZES.md,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   confirmButtonText: {
     fontSize: FONT_SIZES.md,
     fontWeight: '600',
-    color: COLORS.primary,
+    color: colors.primary,
   },
   destructiveButtonText: {
-    color: COLORS.error,
+    color: colors.error,
   },
 });
