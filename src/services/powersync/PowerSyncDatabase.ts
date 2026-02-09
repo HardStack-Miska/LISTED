@@ -21,7 +21,6 @@ export const initializePowerSync = async (): Promise<void> => {
 
   const powerSyncUrl = process.env.EXPO_PUBLIC_POWERSYNC_URL;
   if (!powerSyncUrl) {
-    console.log('PowerSync URL not configured, running in offline mode');
     await db.init();
     return;
   }
@@ -38,7 +37,7 @@ export const disconnectPowerSync = async (): Promise<void> => {
 
 export const syncNow = async (): Promise<void> => {
   const db = getPowerSyncDatabase();
-  if (db.connected) {
+  if (!db.connected) {
     await db.connect(supabaseConnector);
   }
 };

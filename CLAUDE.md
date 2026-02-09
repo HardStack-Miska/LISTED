@@ -1,227 +1,176 @@
-# Claude Code Configuration - Claude Flow V3
+# LISTED — Task Manager App
 
-## Project: LISTED
+## О проекте
 
-**LISTED** — мобильное приложение для управления задачами (React Native + Expo).
+**LISTED** — мобильное приложение для управления задачами в стиле Todoist.
 
-### Технологии
-- **Framework:** React Native (Expo SDK 52)
-- **Router:** Expo Router
-- **Database:** SQLite (expo-sqlite)
-- **State:** React Context (TaskContext)
-- **Styling:** StyleSheet + константы
+### Стек технологий
+- **Framework:** React Native 0.76 (Expo SDK 52, New Architecture)
+- **Router:** Expo Router 4
+- **Database:** SQLite (expo-sqlite) + PowerSync (опциональная синхронизация)
+- **Auth:** Supabase Auth + expo-secure-store
+- **State:** React Context (TaskContext, AuthContext, SyncContext, ThemeContext, SnackbarContext)
+- **Charts:** react-native-gifted-charts
+- **UI Picker:** @quidone/react-native-wheel-picker
+- **Notifications:** expo-notifications
+- **Styling:** StyleSheet + константы (COLORS, SPACING, FONT_SIZES, UI_SIZES)
+- **Testing:** Jest 30 + @testing-library/react-native (138 тестов, 15 suites)
+- **Linting:** ESLint 9 + Prettier
 
-### Структура экранов
-- `/(tabs)/today` — задачи на сегодня
-- `/(tabs)/tasks` — все задачи с фильтрами и сортировкой
-- `/(tabs)/calendar` — календарный вид
-- `/(tabs)/settings` — настройки
-- `/task/[id]` — редактирование задачи
+### Структура проекта
+
+```
+src/
+├── app/                          # Expo Router экраны
+│   ├── (auth)/                   # Авторизация (sign-in, sign-up)
+│   ├── (tabs)/                   # Основные табы
+│   │   ├── today.tsx             # Задачи на сегодня
+│   │   ├── tasks/index.tsx       # Все задачи (фильтры, сортировка)
+│   │   ├── calendar.tsx          # Календарный вид
+│   │   ├── upcoming.tsx          # Предстоящие задачи
+│   │   ├── projects/index.tsx    # Проекты
+│   │   ├── labels/index.tsx      # Метки
+│   │   ├── analytics.tsx         # Статистика
+│   │   └── settings.tsx          # Настройки
+│   ├── task/[id].tsx             # Детали/редактирование задачи
+│   ├── projects/[id].tsx         # Детали проекта
+│   └── onboarding.tsx            # Онбординг
+├── components/
+│   ├── tasks/                    # Компоненты задач
+│   │   ├── TaskItem.tsx
+│   │   ├── QuickAddTask.tsx
+│   │   ├── DatePicker.tsx        # Быстрый выбор даты + календарь
+│   │   ├── TimePicker.tsx        # Выбор времени (wheel picker)
+│   │   ├── DurationPicker.tsx    # Длительность задачи
+│   │   ├── WheelColumn.tsx       # Обёртка @quidone/react-native-wheel-picker
+│   │   ├── PriorityPicker.tsx    # Приоритет P1-P4
+│   │   ├── RecurrencePicker.tsx  # Повторение задач
+│   │   ├── ReminderPicker.tsx    # Напоминания
+│   │   ├── SubtaskList.tsx       # Подзадачи
+│   │   ├── CalendarView.tsx      # Основной календарь
+│   │   ├── CalendarMonthGrid.tsx # Месячная сетка
+│   │   ├── CalendarDayView.tsx   # Дневной вид
+│   │   ├── DayTimeline.tsx       # Таймлайн дня
+│   │   ├── FilterBuilder.tsx     # Конструктор фильтров
+│   │   ├── FilterList.tsx        # Список фильтров
+│   │   └── ActivityHistory.tsx   # История активности
+│   └── ui/                       # Переиспользуемые UI компоненты
+│       ├── ConfirmDialog.tsx
+│       ├── EmptyState.tsx
+│       ├── ErrorBoundary.tsx
+│       ├── FloatingActionButton.tsx
+│       ├── HoldToDeleteButton.tsx
+│       ├── OfflineBanner.tsx
+│       ├── SearchBar.tsx
+│       └── Snackbar.tsx
+├── contexts/                     # React Context провайдеры
+│   ├── TaskContext.tsx            # CRUD задач, проектов, меток
+│   ├── AuthContext.tsx            # Авторизация
+│   ├── SyncContext.tsx            # Синхронизация с сервером
+│   ├── ThemeContext.tsx           # Тёмная/светлая тема
+│   └── SnackbarContext.tsx        # Уведомления в UI
+├── hooks/                        # Кастомные хуки
+│   ├── useTasks.ts
+│   ├── useProjects.ts
+│   ├── useLabels.ts
+│   ├── useAnalytics.ts
+│   ├── useTaskDetail.ts
+│   └── useNotificationDeepLink.ts
+├── services/                     # Сервисный слой
+│   ├── database/                 # SQLite (DatabaseService, WebDatabaseService, schema)
+│   ├── auth/                     # AuthService
+│   ├── notifications/            # NotificationService
+│   ├── network/                  # NetworkService
+│   ├── powersync/                # PowerSync (опциональная синхронизация)
+│   ├── supabase/                 # Supabase клиент
+│   ├── filters/                  # FilterService
+│   ├── analytics/                # AnalyticsService
+│   ├── activity/                 # ActivityService
+│   └── sentry/                   # SentryService (error tracking)
+├── utils/                        # Утилиты
+│   ├── index.ts
+│   ├── dateFilters.ts
+│   └── recurrence.ts
+└── constants/index.ts            # COLORS_LIGHT, COLORS_DARK, SPACING, FONT_SIZES, UI_SIZES
+```
 
 ### Реализованные функции
 - Задачи с приоритетами P1-P4
 - Проекты с цветами
 - Метки (теги)
 - Подзадачи
-- Календарь
-- Поиск и фильтрация
+- Календарь (месяц, день, таймлайн)
+- Поиск и фильтрация (конструктор фильтров)
 - Сортировка (дата → приоритет → имя)
 - Пометка просроченных задач
-- Тёмная тема
-- Quick Add
+- Тёмная/светлая тема (автоматически)
+- Quick Add (быстрое добавление)
+- Повторяющиеся задачи (recurrence)
+- Напоминания (push-уведомления)
+- Длительность задач
+- Авторизация (sign-in / sign-up через Supabase)
+- Онбординг
+- Статистика и аналитика
+- Offline-поддержка
+- История активности
 
-### Команды
+---
+
+## Команды
+
 ```bash
-npm start          # Запуск Expo
-npm test           # Jest тесты
-npx tsc --noEmit   # TypeScript проверка
+npm start              # Запуск Expo
+npm test               # Jest тесты
+npm run lint           # ESLint проверка
+npm run lint:fix       # ESLint с автофиксом
+npm run typecheck      # TypeScript проверка (tsc --noEmit)
+npm run format         # Prettier форматирование
+npm run format:check   # Prettier проверка
 ```
 
 ---
 
-## Behavioral Rules (Always Enforced)
+## Правила
 
+### Поведение
 - Do what has been asked; nothing more, nothing less
-- NEVER create files unless they're absolutely necessary for achieving your goal
-- ALWAYS prefer editing an existing file to creating a new one
-- NEVER proactively create documentation files (*.md) or README files unless explicitly requested
-- NEVER save working files, text/mds, or tests to the root folder
-- Never continuously check status after spawning a swarm — wait for results
 - ALWAYS read a file before editing it
+- ALWAYS run `npm run typecheck` and `npm test` after code changes
+- ALWAYS prefer editing existing files over creating new ones
+- NEVER create files unless absolutely necessary
+- NEVER proactively create documentation files (*.md) unless explicitly requested
 - NEVER commit secrets, credentials, or .env files
+- NEVER save files to root folder — use `src/` structure
 
-## File Organization
+### Стиль кода
+- TypeScript strict mode
+- `const` вместо `let`
+- camelCase для переменных/функций, PascalCase для компонентов
+- UPPER_SNAKE_CASE для констант
+- Один компонент на файл, максимум 300 строк
+- StyleSheet для стилей, константы из `@/constants`
+- `useCallback`, `useMemo` для оптимизации рендеров
+- Код на английском, UI текст на русском
+- Одинарные кавычки, 2 пробела, точка с запятой
 
-- NEVER save to root folder — use the directories below
-- Use `/src` for source code files
-- Use `/tests` for test files
-- Use `/docs` for documentation and markdown files
-- Use `/config` for configuration files
-- Use `/scripts` for utility scripts
-- Use `/examples` for example code
+### Тестирование
+- Тесты в `src/__tests__/` (зеркальная структура `src/`)
+- Jest + @testing-library/react-native
+- Формат: `should [behavior] when [condition]`
+- Мокай внешние зависимости, не внутреннюю логику
+- Тесты должны быть изолированы, без общего состояния
 
-## Project Architecture
+### Git (Conventional Commits)
+- `feat(scope):` — новая функциональность
+- `fix(scope):` — исправление бага
+- `refactor(scope):` — рефакторинг
+- `style(scope):` — форматирование
+- `test(scope):` — тесты
+- Атомарные коммиты, макс 72 символа в заголовке
+- Ветки: `feature/*`, `fix/*`, `release/*`
 
-- Follow Domain-Driven Design with bounded contexts
-- Keep files under 500 lines
-- Use typed interfaces for all public APIs
-- Prefer TDD London School (mock-first) for new code
-- Use event sourcing for state changes
-- Ensure input validation at system boundaries
-
-### Project Config
-
-- **Topology**: hierarchical-mesh
-- **Max Agents**: 15
-- **Memory**: hybrid
-- **HNSW**: Enabled
-- **Neural**: Enabled
-
-## Build & Test
-
-```bash
-# Build
-npm run build
-
-# Test
-npm test
-
-# Lint
-npm run lint
-```
-
-- ALWAYS run tests after making code changes
-- ALWAYS verify build succeeds before committing
-
-## Security Rules
-
-- NEVER hardcode API keys, secrets, or credentials in source files
-- NEVER commit .env files or any file containing secrets
-- Always validate user input at system boundaries
-- Always sanitize file paths to prevent directory traversal
-- Run `npx @claude-flow/cli@latest security scan` after security-related changes
-
-## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
-
-- All operations MUST be concurrent/parallel in a single message
-- Use Claude Code's Task tool for spawning agents, not just MCP
-- ALWAYS batch ALL todos in ONE TodoWrite call (5-10+ minimum)
-- ALWAYS spawn ALL agents in ONE message with full instructions via Task tool
-- ALWAYS batch ALL file reads/writes/edits in ONE message
-- ALWAYS batch ALL Bash commands in ONE message
-
-## Swarm Orchestration
-
-- MUST initialize the swarm using CLI tools when starting complex tasks
-- MUST spawn concurrent agents using Claude Code's Task tool
-- Never use CLI tools alone for execution — Task tool agents do the actual work
-- MUST call CLI tools AND Task tool in ONE message for complex work
-
-### 3-Tier Model Routing (ADR-026)
-
-| Tier | Handler | Latency | Cost | Use Cases |
-|------|---------|---------|------|-----------|
-| **1** | Agent Booster (WASM) | <1ms | $0 | Simple transforms (var→const, add types) — Skip LLM |
-| **2** | Haiku | ~500ms | $0.0002 | Simple tasks, low complexity (<30%) |
-| **3** | Sonnet/Opus | 2-5s | $0.003-0.015 | Complex reasoning, architecture, security (>30%) |
-
-- Always check for `[AGENT_BOOSTER_AVAILABLE]` or `[TASK_MODEL_RECOMMENDATION]` before spawning agents
-- Use Edit tool directly when `[AGENT_BOOSTER_AVAILABLE]`
-
-## Swarm Configuration & Anti-Drift
-
-- ALWAYS use hierarchical topology for coding swarms
-- Keep maxAgents at 6-8 for tight coordination
-- Use specialized strategy for clear role boundaries
-- Use `raft` consensus for hive-mind (leader maintains authoritative state)
-- Run frequent checkpoints via `post-task` hooks
-- Keep shared memory namespace for all agents
-
-```bash
-npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
-```
-
-## Swarm Execution Rules
-
-- ALWAYS use `run_in_background: true` for all agent Task calls
-- ALWAYS put ALL agent Task calls in ONE message for parallel execution
-- After spawning, STOP — do NOT add more tool calls or check status
-- Never poll TaskOutput or check swarm status — trust agents to return
-- When agent results arrive, review ALL results before proceeding
-
-## V3 CLI Commands
-
-### Core Commands
-
-| Command | Subcommands | Description |
-|---------|-------------|-------------|
-| `init` | 4 | Project initialization |
-| `agent` | 8 | Agent lifecycle management |
-| `swarm` | 6 | Multi-agent swarm coordination |
-| `memory` | 11 | AgentDB memory with HNSW search |
-| `task` | 6 | Task creation and lifecycle |
-| `session` | 7 | Session state management |
-| `hooks` | 17 | Self-learning hooks + 12 workers |
-| `hive-mind` | 6 | Byzantine fault-tolerant consensus |
-
-### Quick CLI Examples
-
-```bash
-npx @claude-flow/cli@latest init --wizard
-npx @claude-flow/cli@latest agent spawn -t coder --name my-coder
-npx @claude-flow/cli@latest swarm init --v3-mode
-npx @claude-flow/cli@latest memory search --query "authentication patterns"
-npx @claude-flow/cli@latest doctor --fix
-```
-
-## Available Agents (60+ Types)
-
-### Core Development
-`coder`, `reviewer`, `tester`, `planner`, `researcher`
-
-### Specialized
-`security-architect`, `security-auditor`, `memory-specialist`, `performance-engineer`
-
-### Swarm Coordination
-`hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`
-
-### GitHub & Repository
-`pr-manager`, `code-review-swarm`, `issue-tracker`, `release-manager`
-
-### SPARC Methodology
-`sparc-coord`, `sparc-coder`, `specification`, `pseudocode`, `architecture`
-
-## Memory Commands Reference
-
-```bash
-# Store (REQUIRED: --key, --value; OPTIONAL: --namespace, --ttl, --tags)
-npx @claude-flow/cli@latest memory store --key "pattern-auth" --value "JWT with refresh" --namespace patterns
-
-# Search (REQUIRED: --query; OPTIONAL: --namespace, --limit, --threshold)
-npx @claude-flow/cli@latest memory search --query "authentication patterns"
-
-# List (OPTIONAL: --namespace, --limit)
-npx @claude-flow/cli@latest memory list --namespace patterns --limit 10
-
-# Retrieve (REQUIRED: --key; OPTIONAL: --namespace)
-npx @claude-flow/cli@latest memory retrieve --key "pattern-auth" --namespace patterns
-```
-
-## Quick Setup
-
-```bash
-claude mcp add claude-flow -- npx -y @claude-flow/cli@latest
-npx @claude-flow/cli@latest daemon start
-npx @claude-flow/cli@latest doctor --fix
-```
-
-## Claude Code vs CLI Tools
-
-- Claude Code's Task tool handles ALL execution: agents, file ops, code generation, git
-- CLI tools handle coordination via Bash: swarm init, memory, hooks, routing
-- NEVER use CLI tools as a substitute for Task tool agents
-
-## Support
-
-- Documentation: https://github.com/ruvnet/claude-flow
-- Issues: https://github.com/ruvnet/claude-flow/issues
+### Безопасность
+- NEVER hardcode API keys, secrets, or credentials
+- NEVER commit .env files
+- Validate user input at system boundaries
+- Use parameterized SQL queries (no string concatenation)

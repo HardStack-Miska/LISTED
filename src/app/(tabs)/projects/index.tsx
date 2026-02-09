@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,25 +9,28 @@ import {
   Modal,
   SafeAreaView,
   ActivityIndicator,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS, SPACING, FONT_SIZES, PRESET_COLORS } from "@/constants";
-import { useProjects } from "@/hooks";
-import { useTaskContext } from "@/contexts";
-import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import type { Project } from "@/types";
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { SPACING, FONT_SIZES, PRESET_COLORS } from '@/constants';
+import { useProjects } from '@/hooks';
+import { useTaskContext, useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import type { Project } from '@/types';
 
 export default function ProjectsScreen() {
   const router = useRouter();
   const { projects, isLoading, createProject, updateProject, deleteProject } =
     useProjects();
   const { allTasks } = useTaskContext();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [showEditor, setShowEditor] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [name, setName] = useState("");
+  const [name, setName] = useState('');
   const [color, setColor] = useState<string>(PRESET_COLORS[0]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -55,7 +58,7 @@ export default function ProjectsScreen() {
 
   const handleCreate = useCallback(() => {
     setEditingProject(null);
-    setName("");
+    setName('');
     setColor(PRESET_COLORS[0]);
     setShowEditor(true);
   }, []);
@@ -83,8 +86,8 @@ export default function ProjectsScreen() {
         });
       }
       setShowEditor(false);
-    } catch (error) {
-      console.error("Error saving project:", error);
+    } catch (err) {
+      console.error('Failed to save project:', err);
     }
   }, [name, color, editingProject, createProject, updateProject]);
 
@@ -100,8 +103,8 @@ export default function ProjectsScreen() {
       await deleteProject(projectToDelete.id);
       setShowDeleteConfirm(false);
       setProjectToDelete(null);
-    } catch (error) {
-      console.error("Error deleting project:", error);
+    } catch (err) {
+      console.error('Failed to delete project:', err);
     }
   }, [projectToDelete, deleteProject]);
 
@@ -135,18 +138,18 @@ export default function ProjectsScreen() {
             style={styles.editButton}
             onPress={() => handleEdit(item)}
           >
-            <Ionicons name="pencil" size={18} color={COLORS.textSecondary} />
+            <Ionicons name="pencil" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </TouchableOpacity>
       );
     },
-    [handleProjectPress, handleEdit, projectTaskCounts],
+    [handleProjectPress, handleEdit, projectTaskCounts, styles, colors],
   );
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -162,7 +165,7 @@ export default function ProjectsScreen() {
           <Ionicons
             name="folder-outline"
             size={64}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
           <Text style={styles.emptyTitle}>Нет проектов</Text>
           <Text style={styles.emptyText}>
@@ -192,7 +195,7 @@ export default function ProjectsScreen() {
               <Text style={styles.cancelText}>Отмена</Text>
             </TouchableOpacity>
             <Text style={styles.editorTitle}>
-              {editingProject ? "Редактировать" : "Новый проект"}
+              {editingProject ? 'Редактировать' : 'Новый проект'}
             </Text>
             <TouchableOpacity
               onPress={handleSave}
@@ -217,7 +220,7 @@ export default function ProjectsScreen() {
               value={name}
               onChangeText={setName}
               placeholder="Название проекта"
-              placeholderTextColor={COLORS.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               autoFocus
             />
 
@@ -251,7 +254,7 @@ export default function ProjectsScreen() {
                 <Ionicons
                   name="trash-outline"
                   size={20}
-                  color={COLORS.danger}
+                  color={colors.danger}
                 />
                 <Text style={styles.deleteText}>Удалить проект</Text>
               </TouchableOpacity>
@@ -277,155 +280,156 @@ export default function ProjectsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
-  list: {
-    padding: SPACING.md,
-  },
-  projectItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.surface,
-    padding: SPACING.md,
-    borderRadius: 12,
-    marginBottom: SPACING.sm,
-  },
-  colorIndicator: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: SPACING.md,
-  },
-  projectInfo: {
-    flex: 1,
-  },
-  projectName: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "500",
-    color: COLORS.text,
-  },
-  taskCount: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  editButton: {
-    padding: SPACING.sm,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: SPACING.xl,
-  },
-  emptyTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
-    marginTop: SPACING.md,
-  },
-  emptyText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.sm,
-    textAlign: "center",
-  },
-  editorContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  editorHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  editorTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
-  },
-  cancelText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
-  },
-  saveText: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
-  saveTextDisabled: {
-    color: COLORS.textSecondary,
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  editorContent: {
-    padding: SPACING.md,
-  },
-  label: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "600",
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: SPACING.md,
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  colorGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.sm,
-  },
-  colorOption: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  colorOptionSelected: {
-    borderWidth: 3,
-    borderColor: COLORS.text,
-  },
-  deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: SPACING.xl,
-    padding: SPACING.md,
-    gap: SPACING.sm,
-  },
-  deleteText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.danger,
-  },
-});
+const createStyles = (colors: Colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    header: {
+      padding: SPACING.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    title: {
+      fontSize: FONT_SIZES.xl,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    list: {
+      padding: SPACING.md,
+    },
+    projectItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      padding: SPACING.md,
+      borderRadius: 12,
+      marginBottom: SPACING.sm,
+    },
+    colorIndicator: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      marginRight: SPACING.md,
+    },
+    projectInfo: {
+      flex: 1,
+    },
+    projectName: {
+      fontSize: FONT_SIZES.md,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    taskCount: {
+      fontSize: FONT_SIZES.xs,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    editButton: {
+      padding: SPACING.sm,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: SPACING.xl,
+    },
+    emptyTitle: {
+      fontSize: FONT_SIZES.lg,
+      fontWeight: '600',
+      color: colors.text,
+      marginTop: SPACING.md,
+    },
+    emptyText: {
+      fontSize: FONT_SIZES.md,
+      color: colors.textSecondary,
+      marginTop: SPACING.sm,
+      textAlign: 'center',
+    },
+    editorContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    editorHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: SPACING.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    editorTitle: {
+      fontSize: FONT_SIZES.lg,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    cancelText: {
+      fontSize: FONT_SIZES.md,
+      color: colors.textSecondary,
+    },
+    saveText: {
+      fontSize: FONT_SIZES.md,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    saveTextDisabled: {
+      color: colors.textSecondary,
+    },
+    disabledButton: {
+      opacity: 0.5,
+    },
+    editorContent: {
+      padding: SPACING.md,
+    },
+    label: {
+      fontSize: FONT_SIZES.sm,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: SPACING.sm,
+      marginTop: SPACING.md,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: SPACING.md,
+      fontSize: FONT_SIZES.md,
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    colorGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: SPACING.sm,
+    },
+    colorOption: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    colorOptionSelected: {
+      borderWidth: 3,
+      borderColor: colors.text,
+    },
+    deleteButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: SPACING.xl,
+      padding: SPACING.md,
+      gap: SPACING.sm,
+    },
+    deleteText: {
+      fontSize: FONT_SIZES.md,
+      color: colors.danger,
+    },
+  });

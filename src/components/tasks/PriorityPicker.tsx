@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, FONT_SIZES } from '@/constants';
+import { SPACING, FONT_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 import { Priority, PRIORITY_COLORS } from '@/types/task';
 
 interface PriorityPickerProps {
@@ -25,6 +27,9 @@ export const PriorityPicker: React.FC<PriorityPickerProps> = ({
   value,
   onChange,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Приоритет</Text>
@@ -64,14 +69,14 @@ export const PriorityPicker: React.FC<PriorityPickerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
   },
   label: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.sm,
   },
   options: {
@@ -85,7 +90,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: SPACING.xs,
   },
   pressed: {
@@ -93,6 +98,6 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
 });

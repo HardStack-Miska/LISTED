@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,9 @@ import {
   Vibration,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, FONT_SIZES } from '@/constants';
+import { SPACING, FONT_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 
 interface HoldToDeleteButtonProps {
   onDelete: () => void;
@@ -21,6 +23,9 @@ export const HoldToDeleteButton: React.FC<HoldToDeleteButtonProps> = ({
   label = 'Удалить задачу',
   holdDuration = 1500,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const progressAnim = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -78,7 +83,7 @@ export const HoldToDeleteButton: React.FC<HoldToDeleteButtonProps> = ({
         <Ionicons
           name="trash-outline"
           size={20}
-          color={COLORS.white}
+          color={colors.white}
           style={styles.icon}
         />
         <Text style={styles.label}>{label}</Text>
@@ -88,11 +93,11 @@ export const HoldToDeleteButton: React.FC<HoldToDeleteButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   button: {
     width: '100%',
     height: 56,
-    backgroundColor: COLORS.danger,
+    backgroundColor: colors.danger,
     borderRadius: 12,
     overflow: 'hidden',
     justifyContent: 'center',
@@ -119,7 +124,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FONT_SIZES.md,
     fontWeight: '600',
-    color: COLORS.white,
+    color: colors.white,
   },
   hint: {
     fontSize: FONT_SIZES.xs,

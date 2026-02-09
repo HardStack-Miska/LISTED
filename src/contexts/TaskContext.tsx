@@ -8,6 +8,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { databaseService } from "@/services/database";
+import { getNextOccurrenceDate } from "@/utils/recurrence";
 import type { Task, Priority, RecurrenceRule } from "@/types";
 
 interface TaskContextValue {
@@ -23,6 +24,7 @@ interface TaskContextValue {
     priority?: Priority;
     dueDate?: Date;
     dueTime?: string;
+    duration?: number;
     projectId?: string;
     labels?: string[];
   }) => Promise<{ id: string }>;
@@ -47,56 +49,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
     return d.getTime();
-  };
-
-  // Calculate next due date for recurring tasks
-  const getNextDueDate = (currentDate: Date, rule: RecurrenceRule): Date => {
-    const next = new Date(currentDate);
-
-    switch (rule.type) {
-      case "daily":
-        next.setDate(next.getDate() + rule.interval);
-        break;
-
-      case "weekly":
-        if (rule.daysOfWeek && rule.daysOfWeek.length > 0) {
-          // Find next day in daysOfWeek
-          let found = false;
-          for (let i = 1; i <= 7 && !found; i++) {
-            const checkDate = new Date(currentDate);
-            checkDate.setDate(checkDate.getDate() + i);
-            const dayOfWeek = checkDate.getDay();
-            if (rule.daysOfWeek.includes(dayOfWeek)) {
-              next.setTime(checkDate.getTime());
-              found = true;
-            }
-          }
-        } else {
-          next.setDate(next.getDate() + 7 * rule.interval);
-        }
-        break;
-
-      case "monthly":
-        next.setMonth(next.getMonth() + rule.interval);
-        if (rule.dayOfMonth) {
-          next.setDate(
-            Math.min(
-              rule.dayOfMonth,
-              new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate(),
-            ),
-          );
-        }
-        break;
-
-      case "yearly":
-        next.setFullYear(next.getFullYear() + rule.interval);
-        break;
-
-      default:
-        next.setDate(next.getDate() + 1);
-    }
-
-    return next;
   };
 
   // Sort tasks: by date -> priority -> name
@@ -133,7 +85,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
       setAllTasks(sortTasks(loadedTasks));
     } catch (err) {
       setError("Не удалось загрузить задачи");
-      console.error("Error loading tasks:", err);
     } finally {
       setIsLoading(false);
     }
@@ -183,6 +134,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
       priority?: Priority;
       dueDate?: Date;
       dueTime?: string;
+      duration?: number;
       projectId?: string;
       labels?: string[];
     }) => {
@@ -196,6 +148,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
         completed: false,
         dueDate: task.dueDate,
         dueTime: task.dueTime,
+        duration: task.duration,
         projectId: task.projectId,
         labels: task.labels || [],
         order: 0,
@@ -219,7 +172,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({
 
       // If completing a recurring task, create the next occurrence
       if (isCompleting && task.recurrence && task.dueDate) {
-        const nextDueDate = getNextDueDate(task.dueDate, task.recurrence);
+        const nextDueDate = getNextOccurrenceDate(task.dueDate, task.recurrence);
 
         // Check if we should stop (endDate or endAfterCount)
         const shouldContinue =

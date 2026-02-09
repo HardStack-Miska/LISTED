@@ -49,9 +49,6 @@ class SupabaseService {
     }
 
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      console.warn(
-        'Supabase credentials not configured. Cloud sync will be disabled.',
-      );
       return;
     }
 

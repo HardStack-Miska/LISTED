@@ -67,9 +67,105 @@ jest.mock("@expo/vector-icons", () => {
   };
 });
 
+jest.mock("react-native-gesture-handler", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  return {
+    Swipeable: ({ children }) => children,
+    GestureHandlerRootView: ({ children }) => children,
+    PanGestureHandler: "PanGestureHandler",
+    TapGestureHandler: "TapGestureHandler",
+    State: {},
+    Directions: {},
+  };
+});
+
 jest.mock("@react-native-async-storage/async-storage", () => ({
   setItem: jest.fn(() => Promise.resolve()),
   getItem: jest.fn(() => Promise.resolve(null)),
   removeItem: jest.fn(() => Promise.resolve()),
   clear: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock("expo-secure-store", () => ({
+  getItemAsync: jest.fn(() => Promise.resolve(null)),
+  setItemAsync: jest.fn(() => Promise.resolve()),
+  deleteItemAsync: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock("expo-notifications", () => ({
+  getPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: "undetermined" }),
+  ),
+  requestPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: "granted" }),
+  ),
+  setNotificationHandler: jest.fn(),
+  setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
+  scheduleNotificationAsync: jest.fn(() => Promise.resolve("mock-id")),
+  cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  getAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve([])),
+  addNotificationResponseReceivedListener: jest.fn(() => ({
+    remove: jest.fn(),
+  })),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  AndroidImportance: { HIGH: 4 },
+  AndroidNotificationPriority: { HIGH: "high" },
+}));
+
+// Mock all contexts to avoid deep dependency chains (supabase, netinfo, powersync)
+const MOCK_COLORS = {
+  primary: "#dc4c3e",
+  primaryLight: "#fce4e2",
+  secondary: "#808080",
+  background: "#ffffff",
+  surface: "#fafafa",
+  text: "#202020",
+  textSecondary: "#808080",
+  border: "#f0f0f0",
+  error: "#dc4c3e",
+  danger: "#f44336",
+  success: "#058527",
+  warning: "#ff9900",
+  white: "#ffffff",
+  priorityP1: "#d1453b",
+  priorityP2: "#eb8909",
+  priorityP3: "#246fe0",
+  priorityP4: "#808080",
+  card: "#ffffff",
+};
+
+jest.mock("@/contexts", () => ({
+  ThemeProvider: ({ children }) => children,
+  useTheme: () => ({
+    mode: "light",
+    isDark: false,
+    colors: MOCK_COLORS,
+    setMode: jest.fn(),
+  }),
+  useColors: () => MOCK_COLORS,
+  TaskProvider: ({ children }) => children,
+  useTaskContext: () => ({
+    allTasks: [],
+    isLoading: false,
+    refresh: jest.fn(),
+    toggleComplete: jest.fn(),
+    deleteTask: jest.fn(),
+    createTask: jest.fn(),
+    updateTask: jest.fn(),
+    getTodayTasks: () => [],
+  }),
+  AuthProvider: ({ children }) => children,
+  useAuth: () => ({
+    user: null,
+    isAuthenticated: false,
+    signIn: jest.fn(),
+    signUp: jest.fn(),
+    signOut: jest.fn(),
+  }),
+  SyncProvider: ({ children }) => children,
+  useSync: () => ({
+    isSyncing: false,
+    syncNow: jest.fn(),
+  }),
 }));

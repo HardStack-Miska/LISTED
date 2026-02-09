@@ -1,14 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, FONT_SIZES } from '@/constants';
+import { SPACING, FONT_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 import type { Task } from '@/types';
 
 interface SubtaskListProps {
@@ -26,6 +27,9 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
   onAdd,
   onPress,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
 
@@ -50,7 +54,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
           <Ionicons
             name={item.completed ? 'checkbox' : 'square-outline'}
             size={22}
-            color={item.completed ? COLORS.primary : COLORS.textSecondary}
+            color={item.completed ? colors.primary : colors.textSecondary}
           />
         </TouchableOpacity>
         <TouchableOpacity
@@ -71,11 +75,11 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
           style={styles.deleteButton}
           onPress={() => onDelete(item.id)}
         >
-          <Ionicons name="close" size={18} color={COLORS.textSecondary} />
+          <Ionicons name="close" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
     ),
-    [onToggle, onDelete, onPress],
+    [onToggle, onDelete, onPress, colors, styles],
   );
 
   return (
@@ -99,17 +103,15 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
         </View>
       )}
 
-      <FlatList
-        data={subtasks}
-        renderItem={renderSubtask}
-        keyExtractor={(item) => item.id}
-        scrollEnabled={false}
-        ListEmptyComponent={
-          !isAdding ? (
-            <Text style={styles.emptyText}>Нет подзадач</Text>
-          ) : null
-        }
-      />
+      {subtasks.length > 0 ? (
+        subtasks.map((item) => (
+          <React.Fragment key={item.id}>
+            {renderSubtask({ item })}
+          </React.Fragment>
+        ))
+      ) : (
+        !isAdding && <Text style={styles.emptyText}>Нет подзадач</Text>
+      )}
 
       {isAdding ? (
         <View style={styles.addForm}>
@@ -118,7 +120,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
             value={newTitle}
             onChangeText={setNewTitle}
             placeholder="Название подзадачи"
-            placeholderTextColor={COLORS.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             autoFocus
             onSubmitEditing={handleAdd}
             returnKeyType="done"
@@ -150,7 +152,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
           style={styles.addButton}
           onPress={() => setIsAdding(true)}
         >
-          <Ionicons name="add" size={20} color={COLORS.primary} />
+          <Ionicons name="add" size={20} color={colors.primary} />
           <Text style={styles.addButtonText}>Добавить подзадачу</Text>
         </TouchableOpacity>
       )}
@@ -158,9 +160,9 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: SPACING.md,
   },
@@ -173,24 +175,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.md,
     fontWeight: '600',
-    color: COLORS.text,
+    color: colors.text,
   },
   count: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   progressContainer: {
     marginBottom: SPACING.md,
   },
   progressBackground: {
     height: 4,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: 2,
   },
   subtaskItem: {
@@ -198,7 +200,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   checkbox: {
     marginRight: SPACING.sm,
@@ -208,18 +210,18 @@ const styles = StyleSheet.create({
   },
   subtaskTitle: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.text,
+    color: colors.text,
   },
   subtaskTitleCompleted: {
     textDecorationLine: 'line-through',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   deleteButton: {
     padding: SPACING.xs,
   },
   emptyText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     paddingVertical: SPACING.md,
   },
@@ -231,20 +233,20 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.primary,
+    color: colors.primary,
     marginLeft: SPACING.xs,
   },
   addForm: {
     marginTop: SPACING.sm,
   },
   input: {
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderRadius: 8,
     padding: SPACING.sm,
     fontSize: FONT_SIZES.md,
-    color: COLORS.text,
+    color: colors.text,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   addActions: {
     flexDirection: 'row',
@@ -258,10 +260,10 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: 8,

@@ -57,7 +57,6 @@ export const useAnalytics = (): UseAnalyticsResult => {
       setProjects(projectsData);
       setPriorities(prioritiesData);
     } catch (err) {
-      console.error("Error loading analytics:", err);
       setError("Не удалось загрузить статистику");
     } finally {
       setIsLoading(false);

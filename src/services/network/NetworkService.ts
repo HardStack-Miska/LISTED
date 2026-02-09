@@ -21,6 +21,8 @@ class NetworkService {
   }
 
   async initialize(): Promise<void> {
+    if (this.unsubscribe) return;
+
     const state = await NetInfo.fetch();
     this.isConnectedState = state.isConnected ?? true;
 
@@ -48,8 +50,8 @@ class NetworkService {
     this.listeners.forEach((callback) => {
       try {
         callback(isConnected);
-      } catch (error) {
-        console.error('Error in network listener:', error);
+      } catch {
+        // Listener callback failed
       }
     });
   }

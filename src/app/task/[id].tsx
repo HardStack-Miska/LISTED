@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-} from "react";
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,239 +8,92 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS, SPACING, FONT_SIZES } from "@/constants";
-import { databaseService } from "@/services/database";
-import { useTaskContext } from "@/contexts";
-import { useProjects, useLabels } from "@/hooks";
-import { SubtaskList } from "@/components/tasks/SubtaskList";
-import { DatePicker } from "@/components/tasks/DatePicker";
-import { PriorityPicker } from "@/components/tasks/PriorityPicker";
-import { RecurrencePicker } from "@/components/tasks/RecurrencePicker";
-import { ProjectPicker, ProjectPickerInline } from "@/components/projects";
-import { LabelPicker, LabelPickerInline } from "@/components/labels";
-import { HoldToDeleteButton } from "@/components/ui/HoldToDeleteButton";
-import type { Task, Priority, RecurrenceRule } from "@/types";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { SPACING, FONT_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
+import { useTaskDetail } from '@/hooks';
+import { SubtaskList } from '@/components/tasks/SubtaskList';
+import { DatePicker } from '@/components/tasks/DatePicker';
+import { PriorityPicker } from '@/components/tasks/PriorityPicker';
+import { RecurrencePicker } from '@/components/tasks/RecurrencePicker';
+import { ReminderPicker } from '@/components/tasks/ReminderPicker';
+import { TimePicker } from '@/components/tasks/TimePicker';
+import { DurationPicker } from '@/components/tasks/DurationPicker';
+import { ProjectPicker, ProjectPickerInline } from '@/components/projects';
+import { LabelPicker, LabelPickerInline } from '@/components/labels';
+import { HoldToDeleteButton } from '@/components/ui/HoldToDeleteButton';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const isNewTask = id === 'new';
+
   const {
-    updateTask,
-    deleteTask: contextDeleteTask,
-    refresh,
-  } = useTaskContext();
-  const { projects } = useProjects();
-  const { labels, addLabelToTask, removeLabelFromTask } = useLabels();
-
-  const [task, setTask] = useState<Task | null>(null);
-  const [subtasks, setSubtasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<Priority>(4);
-  const [dueDate, setDueDate] = useState<Date | null>(null);
-  const [projectId, setProjectId] = useState<string | undefined>();
-  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
-  const [recurrence, setRecurrence] = useState<RecurrenceRule | null>(null);
-
-  const [showProjectPicker, setShowProjectPicker] = useState(false);
-  const [showLabelPicker, setShowLabelPicker] = useState(false);
-
-  // Track if there are unsaved changes
-  const isInitialLoadRef = useRef(true);
-  const hasChangesRef = useRef(false);
-
-  useEffect(() => {
-    const loadTask = async () => {
-      if (!id) return;
-
-      try {
-        const loadedTask = await databaseService.getTask(id);
-        if (loadedTask) {
-          setTask(loadedTask);
-          setTitle(loadedTask.title);
-          setDescription(loadedTask.description ?? "");
-          setPriority(loadedTask.priority);
-          setDueDate(loadedTask.dueDate ?? null);
-          setProjectId(loadedTask.projectId);
-          setSelectedLabelIds(loadedTask.labels);
-          setRecurrence(loadedTask.recurrence ?? null);
-        }
-
-        const loadedSubtasks = await databaseService.getSubtasks(id);
-        setSubtasks(loadedSubtasks);
-      } catch (error) {
-        console.error("Error loading task:", error);
-        Alert.alert("Ошибка", "Не удалось загрузить задачу");
-      } finally {
-        setIsLoading(false);
-        // Mark initial load complete after a short delay
-        setTimeout(() => {
-          isInitialLoadRef.current = false;
-        }, 100);
-      }
-    };
-
-    loadTask();
-  }, [id]);
-
-  // Save function - uses context updateTask for global sync
-  const performSave = useCallback(async () => {
-    if (!id || !title.trim() || !hasChangesRef.current) return;
-
-    setIsSaving(true);
-    try {
-      // Use context's updateTask for global synchronization
-      await updateTask(id, {
-        title: title.trim(),
-        description: description.trim() || undefined,
-        priority,
-        dueDate: dueDate ?? undefined,
-        projectId: projectId,
-        recurrence: recurrence ?? undefined,
-      });
-
-      // Update labels
-      const currentLabels = task?.labels ?? [];
-      const toAdd = selectedLabelIds.filter((l) => !currentLabels.includes(l));
-      const toRemove = currentLabels.filter(
-        (l) => !selectedLabelIds.includes(l),
-      );
-
-      for (const labelId of toAdd) {
-        await addLabelToTask(id, labelId);
-      }
-      for (const labelId of toRemove) {
-        await removeLabelFromTask(id, labelId);
-      }
-
-      // Update local task state
-      setTask((prev) => (prev ? { ...prev, labels: selectedLabelIds } : null));
-      hasChangesRef.current = false;
-    } catch (error) {
-      console.error("Error saving task:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [
-    id,
-    title,
-    description,
-    priority,
-    dueDate,
-    projectId,
-    selectedLabelIds,
     task,
-    updateTask,
-    addLabelToTask,
-    removeLabelFromTask,
-  ]);
+    subtasks,
+    isLoading,
+    isSaving,
+    form,
+    pickers,
+    projects,
+    labels,
+    refreshProjects,
+    refreshLabels,
+    performSave,
+    handleDelete,
+    handleCreate,
+    handleAddSubtask,
+    handleToggleSubtask,
+    handleDeleteSubtask,
+    hasUnsavedChanges,
+  } = useTaskDetail({ id, isNew: isNewTask });
 
-  // Track changes after initial load
-  useEffect(() => {
-    if (isInitialLoadRef.current) return;
-    hasChangesRef.current = true;
-  }, [
-    title,
-    description,
-    priority,
-    dueDate,
-    projectId,
-    selectedLabelIds,
-    recurrence,
-  ]);
-
-  // Handle back navigation - save before leaving
   const handleBack = useCallback(async () => {
-    if (hasChangesRef.current) {
+    if (isNewTask) {
+      router.back();
+      return;
+    }
+    if (hasUnsavedChanges()) {
       await performSave();
     }
     router.back();
-  }, [performSave, router]);
+  }, [isNewTask, performSave, hasUnsavedChanges, router]);
 
-  const handleDelete = useCallback(async () => {
-    if (!id) return;
+  const onDelete = useCallback(async () => {
+    await handleDelete();
+    router.back();
+  }, [handleDelete, router]);
 
+  const onCreate = useCallback(async () => {
     try {
-      // Use context's deleteTask for global sync
-      await contextDeleteTask(id);
+      await handleCreate();
       router.back();
-    } catch (error) {
-      console.error("Error deleting task:", error);
-      Alert.alert("Ошибка", "Не удалось удалить задачу");
+    } catch {
+      // Create failed, alert already shown by hook
     }
-  }, [id, contextDeleteTask, router]);
-
-  const handleAddSubtask = useCallback(
-    async (subtaskTitle: string) => {
-      if (!id) return;
-
-      try {
-        const result = await databaseService.createSubtask(id, {
-          title: subtaskTitle,
-        });
-        const newSubtask = await databaseService.getTask(result.id);
-        if (newSubtask) {
-          setSubtasks((prev) => [...prev, newSubtask]);
-        }
-      } catch (error) {
-        console.error("Error creating subtask:", error);
-      }
-    },
-    [id],
-  );
-
-  const handleToggleSubtask = useCallback(async (subtaskId: string) => {
-    try {
-      await databaseService.toggleTaskComplete(subtaskId);
-      setSubtasks((prev) =>
-        prev.map((s) =>
-          s.id === subtaskId ? { ...s, completed: !s.completed } : s,
-        ),
-      );
-    } catch (error) {
-      console.error("Error toggling subtask:", error);
-    }
-  }, []);
-
-  const handleDeleteSubtask = useCallback(async (subtaskId: string) => {
-    try {
-      await databaseService.deleteTask(subtaskId);
-      setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
-    } catch (error) {
-      console.error("Error deleting subtask:", error);
-    }
-  }, []);
-
-  const handleLabelToggle = useCallback((labelId: string) => {
-    setSelectedLabelIds((prev) =>
-      prev.includes(labelId)
-        ? prev.filter((lid) => lid !== labelId)
-        : [...prev, labelId],
-    );
-  }, []);
+  }, [handleCreate, router]);
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
 
-  if (!task) {
+  if (!task && !isNewTask) {
     return (
       <SafeAreaView style={styles.errorContainer}>
         <Ionicons
           name="alert-circle-outline"
           size={48}
-          color={COLORS.textSecondary}
+          color={colors.textSecondary}
         />
         <Text style={styles.errorText}>Задача не найдена</Text>
         <TouchableOpacity
@@ -260,35 +107,44 @@ export default function TaskDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        {isSaving && (
-          <View style={styles.savingIndicator}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
-            <Text style={styles.savingText}>Сохранение...</Text>
-          </View>
+        {isNewTask ? (
+          <>
+            <Text style={styles.headerTitle}>Новая задача</Text>
+            <View style={styles.headerSpacer} />
+          </>
+        ) : (
+          isSaving && (
+            <View style={styles.savingIndicator}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.savingText}>Сохранение...</Text>
+            </View>
+          )
         )}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <TextInput
           style={styles.titleInput}
-          value={title}
-          onChangeText={setTitle}
+          value={form.title}
+          onChangeText={form.setTitle}
           placeholder="Название задачи"
-          placeholderTextColor={COLORS.textSecondary}
-          multiline
+          placeholderTextColor={colors.textSecondary}
+          autoFocus={isNewTask}
+          returnKeyType="done"
+          blurOnSubmit
         />
 
         <TextInput
           style={styles.descriptionInput}
-          value={description}
-          onChangeText={setDescription}
+          value={form.description}
+          onChangeText={form.setDescription}
           placeholder="Добавить описание..."
-          placeholderTextColor={COLORS.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           multiline
           textAlignVertical="top"
         />
@@ -300,157 +156,274 @@ export default function TaskDetailScreen() {
               <Ionicons
                 name="calendar-outline"
                 size={20}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
               <Text style={styles.fieldLabel}>Дата</Text>
             </View>
-            <DatePicker value={dueDate} onChange={setDueDate} />
+            <DatePicker value={form.dueDate} onChange={form.setDueDate} />
+            {form.dueDate && (
+              <TimePicker value={form.dueTime} onChange={form.setDueTime} />
+            )}
+            {form.dueTime && (
+              <DurationPicker
+                value={form.duration}
+                onChange={form.setDuration}
+              />
+            )}
           </View>
 
-          <PriorityPicker value={priority} onChange={setPriority} />
+          <PriorityPicker
+            value={form.priority}
+            onChange={form.setPriority}
+          />
 
           <ProjectPickerInline
             projects={projects}
-            selectedId={projectId}
-            onPress={() => setShowProjectPicker(true)}
+            selectedId={form.projectId}
+            onPress={() => pickers.setShowProjectPicker(true)}
           />
 
           <LabelPickerInline
             labels={labels}
-            selectedIds={selectedLabelIds}
-            onPress={() => setShowLabelPicker(true)}
+            selectedIds={form.selectedLabelIds}
+            onPress={() => pickers.setShowLabelPicker(true)}
           />
 
-          <RecurrencePicker value={recurrence} onChange={setRecurrence} />
-        </View>
+          <RecurrencePicker
+            value={form.recurrence}
+            onChange={form.setRecurrence}
+          />
 
-        <View style={styles.section}>
-          <SubtaskList
-            subtasks={subtasks}
-            onToggle={handleToggleSubtask}
-            onDelete={handleDeleteSubtask}
-            onAdd={handleAddSubtask}
+          {form.recurrence !== null && !isNewTask && (
+            <TouchableOpacity
+              style={styles.removeRecurrence}
+              onPress={() => {
+                Alert.alert(
+                  'Убрать повторение?',
+                  'Повторение будет отключено. Уже завершённые задачи останутся.',
+                  [
+                    { text: 'Отмена', style: 'cancel' },
+                    {
+                      text: 'Убрать',
+                      style: 'destructive',
+                      onPress: () => form.setRecurrence(null),
+                    },
+                  ],
+                );
+              }}
+            >
+              <Ionicons
+                name="close-circle-outline"
+                size={18}
+                color={colors.error}
+              />
+              <Text style={styles.removeRecurrenceText}>
+                Убрать повторение
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <ReminderPicker
+            value={form.reminderMinutes}
+            onChange={form.setReminderMinutes}
+            hasDueDate={form.dueDate !== null}
           />
         </View>
 
-        <View style={styles.deleteSection}>
-          <HoldToDeleteButton onDelete={handleDelete} />
-        </View>
+        {!isNewTask && (
+          <View style={styles.section}>
+            <SubtaskList
+              subtasks={subtasks}
+              onToggle={handleToggleSubtask}
+              onDelete={handleDeleteSubtask}
+              onAdd={handleAddSubtask}
+            />
+          </View>
+        )}
+
+        {!isNewTask && (
+          <View style={styles.deleteSection}>
+            <HoldToDeleteButton onDelete={onDelete} />
+          </View>
+        )}
       </ScrollView>
 
+      {isNewTask && (
+        <View style={styles.createFooter}>
+          <TouchableOpacity
+            style={[
+              styles.createButton,
+              !form.title.trim() && styles.createButtonDisabled,
+            ]}
+            onPress={onCreate}
+            disabled={!form.title.trim()}
+          >
+            <Text style={styles.createButtonText}>Создать задачу</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ProjectPicker
-        visible={showProjectPicker}
+        visible={pickers.showProjectPicker}
         projects={projects}
-        selectedId={projectId}
-        onSelect={setProjectId}
-        onClose={() => setShowProjectPicker(false)}
+        selectedId={form.projectId}
+        onSelect={form.setProjectId}
+        onClose={() => {
+          pickers.setShowProjectPicker(false);
+          refreshProjects();
+        }}
       />
 
       <LabelPicker
-        visible={showLabelPicker}
+        visible={pickers.showLabelPicker}
         labels={labels}
-        selectedIds={selectedLabelIds}
-        onToggle={handleLabelToggle}
-        onClose={() => setShowLabelPicker(false)}
+        selectedIds={form.selectedLabelIds}
+        onToggle={form.handleLabelToggle}
+        onClose={() => {
+          pickers.setShowLabelPicker(false);
+          refreshLabels();
+        }}
       />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-    padding: SPACING.xl,
-  },
-  errorText: {
-    fontSize: FONT_SIZES.lg,
-    color: COLORS.text,
-    marginTop: SPACING.md,
-  },
-  backButtonError: {
-    marginTop: SPACING.lg,
-    padding: SPACING.md,
-  },
-  backButtonText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.primary,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    padding: SPACING.sm,
-  },
-  savingIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-    paddingRight: SPACING.sm,
-  },
-  savingText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-  },
-  content: {
-    flex: 1,
-    padding: SPACING.md,
-  },
-  titleInput: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: "600",
-    color: COLORS.text,
-    padding: 0,
-    marginBottom: SPACING.md,
-  },
-  descriptionInput: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text,
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: SPACING.md,
-    minHeight: 80,
-    marginBottom: SPACING.lg,
-  },
-  section: {
-    marginBottom: SPACING.lg,
-    gap: SPACING.sm,
-  },
-  fieldLabel: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text,
-  },
-  dateSection: {
-    backgroundColor: COLORS.surface,
-    padding: SPACING.md,
-    borderRadius: 12,
-  },
-  dateLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    marginBottom: SPACING.sm,
-  },
-  deleteSection: {
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.xl,
-  },
-});
+const createStyles = (colors: Colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      padding: SPACING.xl,
+    },
+    errorText: {
+      fontSize: FONT_SIZES.lg,
+      color: colors.text,
+      marginTop: SPACING.md,
+    },
+    backButtonError: {
+      marginTop: SPACING.lg,
+      padding: SPACING.md,
+    },
+    backButtonText: {
+      fontSize: FONT_SIZES.md,
+      color: colors.primary,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: SPACING.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerButton: {
+      padding: SPACING.sm,
+    },
+    savingIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.xs,
+      paddingRight: SPACING.sm,
+    },
+    savingText: {
+      fontSize: FONT_SIZES.sm,
+      color: colors.textSecondary,
+    },
+    content: {
+      flex: 1,
+      padding: SPACING.md,
+    },
+    titleInput: {
+      fontSize: FONT_SIZES.xl,
+      fontWeight: '600',
+      color: colors.text,
+      padding: 0,
+      marginBottom: SPACING.md,
+    },
+    descriptionInput: {
+      fontSize: FONT_SIZES.md,
+      color: colors.text,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: SPACING.md,
+      minHeight: 80,
+      marginBottom: SPACING.lg,
+    },
+    section: {
+      marginBottom: SPACING.lg,
+      gap: SPACING.sm,
+    },
+    fieldLabel: {
+      fontSize: FONT_SIZES.md,
+      color: colors.text,
+    },
+    dateSection: {
+      backgroundColor: colors.surface,
+      padding: SPACING.md,
+      borderRadius: 12,
+    },
+    dateLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+      marginBottom: SPACING.sm,
+    },
+    deleteSection: {
+      marginTop: SPACING.lg,
+      marginBottom: SPACING.xl,
+    },
+    headerTitle: {
+      flex: 1,
+      fontSize: FONT_SIZES.lg,
+      fontWeight: '600',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    headerSpacer: {
+      width: 48,
+    },
+    createFooter: {
+      padding: SPACING.md,
+      paddingBottom: SPACING.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    createButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: SPACING.md,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    createButtonDisabled: {
+      backgroundColor: colors.border,
+    },
+    createButtonText: {
+      fontSize: FONT_SIZES.md,
+      fontWeight: '600',
+      color: colors.white,
+    },
+    removeRecurrence: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+    },
+    removeRecurrenceText: {
+      fontSize: FONT_SIZES.sm,
+      color: colors.error,
+      marginLeft: SPACING.xs,
+    },
+  });

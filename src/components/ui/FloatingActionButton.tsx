@@ -1,6 +1,8 @@
-import React from "react";
-import { Pressable, Text, StyleSheet } from "react-native";
-import { COLORS, SPACING, UI_SIZES } from "@/constants";
+import React, { useMemo } from 'react';
+import { Pressable, Text, StyleSheet } from 'react-native';
+import { SPACING, UI_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 
 interface FloatingActionButtonProps {
   onPress: () => void;
@@ -10,9 +12,12 @@ interface FloatingActionButtonProps {
 
 export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   onPress,
-  icon = "+",
+  icon = '+',
   testID,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Pressable
       style={({ pressed }) => [styles.container, pressed && styles.pressed]}
@@ -24,18 +29,18 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
-    position: "absolute",
+    position: 'absolute',
     bottom: SPACING.lg,
     right: SPACING.lg,
     width: UI_SIZES.fabSize,
     height: UI_SIZES.fabSize,
     borderRadius: UI_SIZES.fabRadius,
-    backgroundColor: COLORS.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -50,7 +55,7 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 28,
-    color: COLORS.white,
-    fontWeight: "300",
+    color: colors.white,
+    fontWeight: '300',
   },
 });

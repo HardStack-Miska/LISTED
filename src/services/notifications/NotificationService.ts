@@ -1,11 +1,18 @@
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import type { Task } from "@/types";
 
-// Only import notifications on native platforms
+// Only import notifications on native platforms (not in Expo Go for SDK 53+)
 let Notifications: typeof import("expo-notifications") | null = null;
 
-if (Platform.OS !== "web") {
-  Notifications = require("expo-notifications");
+const isExpoGo = Constants.appOwnership === "expo";
+
+if (Platform.OS !== "web" && !isExpoGo) {
+  try {
+    Notifications = require("expo-notifications");
+  } catch {
+    Notifications = null;
+  }
 }
 
 // Configure notification behavior (only on native)

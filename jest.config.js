@@ -6,7 +6,7 @@ module.exports = {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
   transformIgnorePatterns: [
-    "node_modules/(?!(react-native|@react-native|expo|@expo|expo-router|expo-constants|expo-linking|expo-status-bar|expo-system-ui|expo-font|expo-sqlite|react-native-safe-area-context|react-native-screens|@react-native-async-storage)/)",
+    "node_modules/(?!(react-native|@react-native|expo|@expo|expo-router|expo-constants|expo-linking|expo-status-bar|expo-system-ui|expo-font|expo-sqlite|expo-secure-store|expo-notifications|react-native-safe-area-context|react-native-screens|react-native-url-polyfill|@react-native-async-storage|@supabase)/)",
   ],
   testMatch: ["**/__tests__/**/*.test.ts?(x)"],
   testPathIgnorePatterns: ["/node_modules/"],

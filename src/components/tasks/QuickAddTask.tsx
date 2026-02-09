@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,14 +12,16 @@ import {
   Platform,
   Keyboard,
   ScrollView,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS, SPACING, FONT_SIZES, UI_SIZES } from "@/constants";
-import { PriorityPicker } from "./PriorityPicker";
-import { DatePicker } from "./DatePicker";
-import type { Priority } from "@/types/task";
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SPACING, FONT_SIZES, UI_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
+import { PriorityPicker } from './PriorityPicker';
+import { DatePicker } from './DatePicker';
+import type { Priority } from '@/types/task';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const ANIMATION_DURATION = 300;
 
 interface Project {
@@ -39,6 +41,7 @@ interface QuickAddTaskProps {
   }) => void;
   projects?: Project[];
   defaultProjectId?: string | null;
+  defaultDate?: Date | null;
 }
 
 export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
@@ -47,10 +50,14 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
   onSubmit,
   projects = [],
   defaultProjectId = null,
+  defaultDate = null,
 }) => {
-  const [title, setTitle] = useState("");
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<Priority>(4);
-  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [dueDate, setDueDate] = useState<Date | null>(defaultDate);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     defaultProjectId,
   );
@@ -95,11 +102,11 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
   }, [visible, fadeAnim, slideAnim]);
 
   const resetForm = useCallback(() => {
-    setTitle("");
+    setTitle('');
     setPriority(4);
-    setDueDate(null);
+    setDueDate(defaultDate);
     setSelectedProjectId(defaultProjectId);
-  }, [defaultProjectId]);
+  }, [defaultProjectId, defaultDate]);
 
   const handleClose = useCallback(() => {
     resetForm();
@@ -165,14 +172,14 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
               <Ionicons
                 name="folder-outline"
                 size={20}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
               <Text style={styles.projectItemText}>Входящие</Text>
               {!selectedProjectId && (
                 <Ionicons
                   name="checkmark"
                   size={20}
-                  color={COLORS.primary}
+                  color={colors.primary}
                   style={styles.checkIcon}
                 />
               )}
@@ -191,7 +198,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
                 <View
                   style={[
                     styles.projectColor,
-                    { backgroundColor: project.color || COLORS.textSecondary },
+                    { backgroundColor: project.color || colors.textSecondary },
                   ]}
                 />
                 <Text style={styles.projectItemText}>{project.name}</Text>
@@ -199,7 +206,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
                   <Ionicons
                     name="checkmark"
                     size={20}
-                    color={COLORS.primary}
+                    color={colors.primary}
                     style={styles.checkIcon}
                   />
                 )}
@@ -221,7 +228,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
     >
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
           <Pressable style={styles.overlayPressable} onPress={handleClose} />
@@ -234,7 +241,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
 
           <View style={styles.header}>
             <Pressable onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
             </Pressable>
             <Text style={styles.headerTitle}>Новая задача</Text>
             <View style={styles.placeholder} />
@@ -250,7 +257,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
                 ref={inputRef}
                 style={styles.input}
                 placeholder="Название задачи"
-                placeholderTextColor={COLORS.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 value={title}
                 onChangeText={setTitle}
                 multiline
@@ -280,7 +287,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
                         styles.projectColor,
                         {
                           backgroundColor:
-                            selectedProject.color || COLORS.textSecondary,
+                            selectedProject.color || colors.textSecondary,
                         },
                       ]}
                     />
@@ -293,7 +300,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
                     <Ionicons
                       name="folder-outline"
                       size={18}
-                      color={COLORS.textSecondary}
+                      color={colors.textSecondary}
                     />
                     <Text style={styles.projectButtonText}>Входящие</Text>
                   </>
@@ -301,7 +308,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
                 <Ionicons
                   name="chevron-down"
                   size={18}
-                  color={COLORS.textSecondary}
+                  color={colors.textSecondary}
                   style={styles.chevron}
                 />
               </Pressable>
@@ -318,7 +325,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
               onPress={handleSubmit}
               disabled={!title.trim()}
             >
-              <Ionicons name="add" size={20} color={COLORS.white} />
+              <Ionicons name="add" size={20} color={colors.white} />
               <Text style={styles.submitButtonText}>Добавить задачу</Text>
             </Pressable>
           </View>
@@ -330,24 +337,24 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
-    justifyContent: "flex-end",
+    justifyContent: 'flex-end',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   overlayPressable: {
     flex: 1,
   },
   container: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: SCREEN_HEIGHT * 0.85,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -356,28 +363,28 @@ const styles = StyleSheet.create({
   handle: {
     width: 36,
     height: 4,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
     borderRadius: 2,
-    alignSelf: "center",
+    alignSelf: 'center',
     marginTop: SPACING.sm,
     marginBottom: SPACING.xs,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   closeButton: {
     padding: SPACING.xs,
   },
   headerTitle: {
     fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
+    fontWeight: '600',
+    color: colors.text,
   },
   placeholder: {
     width: 32,
@@ -390,30 +397,30 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: FONT_SIZES.lg,
-    color: COLORS.text,
+    color: colors.text,
     padding: SPACING.sm,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
     minHeight: 48,
     maxHeight: 120,
   },
   label: {
     fontSize: FONT_SIZES.sm,
-    fontWeight: "500",
-    color: COLORS.textSecondary,
+    fontWeight: '500',
+    color: colors.textSecondary,
     marginBottom: SPACING.sm,
   },
   projectSection: {
     marginBottom: SPACING.md,
   },
   projectButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: SPACING.sm,
   },
   projectColor: {
@@ -424,32 +431,32 @@ const styles = StyleSheet.create({
   projectButtonText: {
     flex: 1,
     fontSize: FONT_SIZES.md,
-    color: COLORS.text,
+    color: colors.text,
   },
   chevron: {
-    marginLeft: "auto",
+    marginLeft: 'auto',
   },
   pressed: {
     opacity: 0.7,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   footer: {
     padding: SPACING.md,
     paddingBottom: SPACING.lg,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   submitButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
     paddingVertical: SPACING.md,
     borderRadius: 8,
     gap: SPACING.xs,
   },
   submitButtonDisabled: {
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
   },
   submitButtonPressed: {
     opacity: 0.9,
@@ -457,21 +464,21 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: FONT_SIZES.md,
-    fontWeight: "600",
-    color: COLORS.white,
+    fontWeight: '600',
+    color: colors.white,
   },
   projectPickerOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   projectPickerContainer: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.background,
     borderRadius: UI_SIZES.cardRadius,
     width: 280,
     maxHeight: 400,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
@@ -479,30 +486,30 @@ const styles = StyleSheet.create({
   },
   projectPickerTitle: {
     fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
+    fontWeight: '600',
+    color: colors.text,
     padding: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   projectList: {
     maxHeight: 320,
   },
   projectItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: SPACING.md,
     gap: SPACING.sm,
   },
   projectItemSelected: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   projectItemText: {
     flex: 1,
     fontSize: FONT_SIZES.md,
-    color: COLORS.text,
+    color: colors.text,
   },
   checkIcon: {
-    marginLeft: "auto",
+    marginLeft: 'auto',
   },
 });

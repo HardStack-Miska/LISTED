@@ -57,9 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setSession(currentSession);
           setUser(currentSession.user ?? null);
         }
-      } catch (error) {
+      } catch {
         // Silent fail - user can use app without auth
-        console.log("No active session");
       }
     };
 

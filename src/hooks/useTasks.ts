@@ -53,7 +53,6 @@ export const useTasks = (
       setTasks(loadedTasks);
     } catch (err) {
       setError("Не удалось загрузить задачи");
-      console.error("Error loading tasks:", err);
     } finally {
       setIsLoading(false);
     }
@@ -96,20 +95,8 @@ export const useTasks = (
     );
   }, []);
 
-  const toggleComplete = useCallback(async (id: string) => {
-    await databaseService.toggleTaskComplete(id);
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              completed: !task.completed,
-              completedAt: !task.completed ? new Date() : undefined,
-            }
-          : task,
-      ),
-    );
-  }, []);
+  // Alias for backward compatibility
+  const toggleComplete = toggleTask;
 
   const deleteTask = useCallback(async (id: string) => {
     await databaseService.deleteTask(id);

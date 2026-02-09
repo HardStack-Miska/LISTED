@@ -30,7 +30,6 @@ export const useLabels = (): UseLabelsResult => {
       setLabels(data);
     } catch (err) {
       setError("Не удалось загрузить метки");
-      console.error("Error loading labels:", err);
     } finally {
       setIsLoading(false);
     }

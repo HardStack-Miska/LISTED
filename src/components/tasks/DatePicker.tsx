@@ -1,7 +1,9 @@
-import React, { useState, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet, Modal } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS, SPACING, FONT_SIZES, UI_SIZES } from "@/constants";
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SPACING, FONT_SIZES, UI_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 
 interface DatePickerProps {
   value: Date | null;
@@ -18,17 +20,17 @@ interface QuickDateOption {
 
 const QUICK_OPTIONS: QuickDateOption[] = [
   {
-    key: "today",
-    label: "Сегодня",
-    icon: "today",
-    color: "#058527", // green
+    key: 'today',
+    label: 'Сегодня',
+    icon: 'today',
+    color: '#058527', // green
     getDate: () => new Date(),
   },
   {
-    key: "tomorrow",
-    label: "Завтра",
-    icon: "sunny",
-    color: "#ff9900", // orange
+    key: 'tomorrow',
+    label: 'Завтра',
+    icon: 'sunny',
+    color: '#ff9900', // orange
     getDate: () => {
       const date = new Date();
       date.setDate(date.getDate() + 1);
@@ -36,10 +38,10 @@ const QUICK_OPTIONS: QuickDateOption[] = [
     },
   },
   {
-    key: "nextWeek",
-    label: "След. неделя",
-    icon: "calendar",
-    color: "#246fe0", // blue
+    key: 'nextWeek',
+    label: 'След. неделя',
+    icon: 'calendar',
+    color: '#246fe0', // blue
     getDate: () => {
       const date = new Date();
       // Go to next Monday
@@ -50,10 +52,10 @@ const QUICK_OPTIONS: QuickDateOption[] = [
     },
   },
   {
-    key: "noDate",
-    label: "Без даты",
-    icon: "close-circle",
-    color: "#808080", // gray
+    key: 'noDate',
+    label: 'Без даты',
+    icon: 'close-circle',
+    color: '#808080', // gray
     getDate: () => null,
   },
 ];
@@ -64,28 +66,33 @@ const formatDate = (date: Date): string => {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   if (date.toDateString() === today.toDateString()) {
-    return "Сегодня";
+    return 'Сегодня';
   }
   if (date.toDateString() === tomorrow.toDateString()) {
-    return "Завтра";
+    return 'Завтра';
   }
 
   const options: Intl.DateTimeFormatOptions = {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
   };
-  return date.toLocaleDateString("ru-RU", options);
+  return date.toLocaleDateString('ru-RU', options);
 };
 
 export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(value || new Date());
+  const [lastSelectedKey, setLastSelectedKey] = useState<string | null>(null);
 
   const handleQuickSelect = useCallback(
     (option: QuickDateOption) => {
       const date = option.getDate();
       onChange(date);
+      setLastSelectedKey(option.key);
     },
     [onChange],
   );
@@ -95,13 +102,17 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
       const optionDate = option.getDate();
       if (optionDate === null) return value === null;
       if (value === null) return false;
-      return value.toDateString() === optionDate.toDateString();
+      if (value.toDateString() !== optionDate.toDateString()) return false;
+      // When multiple options produce the same date, only highlight the one clicked
+      if (lastSelectedKey !== null) return option.key === lastSelectedKey;
+      return true;
     },
-    [value],
+    [value, lastSelectedKey],
   );
 
   const handleClearDate = useCallback(() => {
     onChange(null);
+    setLastSelectedKey(null);
   }, [onChange]);
 
   const handleDayPress = useCallback(
@@ -112,6 +123,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
         day,
       );
       onChange(newDate);
+      setLastSelectedKey(null);
       setShowCalendar(false);
     },
     [selectedMonth, onChange],
@@ -175,18 +187,18 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
       year === value.getFullYear();
 
     const monthNames = [
-      "Январь",
-      "Февраль",
-      "Март",
-      "Апрель",
-      "Май",
-      "Июнь",
-      "Июль",
-      "Август",
-      "Сентябрь",
-      "Октябрь",
-      "Ноябрь",
-      "Декабрь",
+      'Январь',
+      'Февраль',
+      'Март',
+      'Апрель',
+      'Май',
+      'Июнь',
+      'Июль',
+      'Август',
+      'Сентябрь',
+      'Октябрь',
+      'Ноябрь',
+      'Декабрь',
     ];
 
     return (
@@ -203,7 +215,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
           <Pressable style={styles.calendarContainer}>
             <View style={styles.calendarHeader}>
               <Pressable onPress={goToPreviousMonth} style={styles.navButton}>
-                <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+                <Ionicons name="chevron-back" size={24} color={colors.text} />
               </Pressable>
               <Text style={styles.monthTitle}>
                 {monthNames[month]} {year}
@@ -212,13 +224,13 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
                 <Ionicons
                   name="chevron-forward"
                   size={24}
-                  color={COLORS.text}
+                  color={colors.text}
                 />
               </Pressable>
             </View>
 
             <View style={styles.weekDays}>
-              {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((day) => (
+              {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day) => (
                 <Text key={day} style={styles.weekDayText}>
                   {day}
                 </Text>
@@ -267,17 +279,17 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
         <Ionicons
           name="calendar"
           size={16}
-          color={value ? COLORS.primary : COLORS.textSecondary}
+          color={value ? colors.primary : colors.textSecondary}
         />
         <Text style={[styles.selectedDateText, !value && styles.noDateText]}>
-          {value ? formatDate(value) : "Не выбрана"}
+          {value ? formatDate(value) : 'Не выбрана'}
         </Text>
         {value && (
           <Pressable onPress={handleClearDate} style={styles.clearButton}>
             <Ionicons
               name="close-circle"
               size={16}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
           </Pressable>
         )}
@@ -294,7 +306,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
                 isActive && styles.quickButtonActive,
                 isActive && {
                   borderColor: option.color,
-                  backgroundColor: option.color + "15",
+                  backgroundColor: option.color + '15',
                 },
                 pressed && styles.pressed,
               ]}
@@ -308,7 +320,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
               <Text
                 style={[
                   styles.quickButtonText,
-                  isActive && { color: option.color, fontWeight: "600" },
+                  isActive && { color: option.color, fontWeight: '600' },
                 ]}
               >
                 {option.label}
@@ -326,9 +338,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
           <Ionicons
             name="calendar-number-outline"
             size={18}
-            color={COLORS.primary}
+            color={colors.primary}
           />
-          <Text style={[styles.quickButtonText, { color: COLORS.primary }]}>
+          <Text style={[styles.quickButtonText, { color: colors.primary }]}>
             Календарь
           </Text>
         </Pressable>
@@ -339,43 +351,43 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
   },
   clearButton: {
     padding: SPACING.xs,
-    marginLeft: "auto",
+    marginLeft: 'auto',
   },
   selectedDate: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: SPACING.xs,
     marginBottom: SPACING.sm,
     paddingVertical: SPACING.xs,
   },
   selectedDateText: {
     fontSize: FONT_SIZES.md,
-    fontWeight: "500",
-    color: COLORS.primary,
+    fontWeight: '500',
+    color: colors.primary,
   },
   noDateText: {
-    color: COLORS.textSecondary,
-    fontWeight: "400",
+    color: colors.textSecondary,
+    fontWeight: '400',
   },
   quickOptions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: SPACING.sm,
   },
   quickButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: SPACING.xs,
   },
   quickButtonActive: {
@@ -383,33 +395,33 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   quickButtonText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   calendarOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   calendarContainer: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.background,
     borderRadius: UI_SIZES.cardRadius,
     padding: SPACING.md,
     width: 320,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 16,
   },
   calendarHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: SPACING.md,
   },
   navButton: {
@@ -417,50 +429,50 @@ const styles = StyleSheet.create({
   },
   monthTitle: {
     fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
+    fontWeight: '600',
+    color: colors.text,
   },
   weekDays: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     marginBottom: SPACING.sm,
   },
   weekDayText: {
     width: 36,
-    textAlign: "center",
+    textAlign: 'center',
     fontSize: FONT_SIZES.xs,
-    fontWeight: "500",
-    color: COLORS.textSecondary,
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
   week: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     marginBottom: SPACING.xs,
   },
   dayButton: {
     width: 36,
     height: 36,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: 18,
   },
   todayButton: {
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   selectedDayButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   dayText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text,
+    color: colors.text,
   },
   todayText: {
-    color: COLORS.primary,
-    fontWeight: "600",
+    color: colors.primary,
+    fontWeight: '600',
   },
   selectedDayText: {
-    color: COLORS.white,
-    fontWeight: "600",
+    color: colors.white,
+    fontWeight: '600',
   },
 });

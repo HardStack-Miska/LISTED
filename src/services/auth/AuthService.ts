@@ -6,6 +6,16 @@ import {
 } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../supabase';
 
+const CONFIG_ERROR: AuthResult = {
+  user: null,
+  session: null,
+  error: { message: 'Supabase not configured', name: 'ConfigError' } as AuthError,
+};
+
+const CONFIG_ERROR_ONLY = {
+  error: { message: 'Supabase not configured', name: 'ConfigError' } as AuthError,
+};
+
 export interface AuthResult {
   user: User | null;
   session: Session | null;
@@ -29,11 +39,7 @@ class AuthService {
   async signUp(email: string, password: string): Promise<AuthResult> {
     const client = getSupabaseClient();
     if (!client) {
-      return {
-        user: null,
-        session: null,
-        error: { message: 'Supabase not configured', name: 'ConfigError' } as AuthError,
-      };
+      return CONFIG_ERROR;
     }
 
     const { data, error } = await client.auth.signUp({
@@ -51,11 +57,7 @@ class AuthService {
   async signIn(email: string, password: string): Promise<AuthResult> {
     const client = getSupabaseClient();
     if (!client) {
-      return {
-        user: null,
-        session: null,
-        error: { message: 'Supabase not configured', name: 'ConfigError' } as AuthError,
-      };
+      return CONFIG_ERROR;
     }
 
     const { data, error } = await client.auth.signInWithPassword({
@@ -113,9 +115,7 @@ class AuthService {
   async resetPassword(email: string): Promise<{ error: AuthError | null }> {
     const client = getSupabaseClient();
     if (!client) {
-      return {
-        error: { message: 'Supabase not configured', name: 'ConfigError' } as AuthError,
-      };
+      return CONFIG_ERROR_ONLY;
     }
 
     const { error } = await client.auth.resetPasswordForEmail(email);
@@ -125,9 +125,7 @@ class AuthService {
   async updatePassword(newPassword: string): Promise<{ error: AuthError | null }> {
     const client = getSupabaseClient();
     if (!client) {
-      return {
-        error: { message: 'Supabase not configured', name: 'ConfigError' } as AuthError,
-      };
+      return CONFIG_ERROR_ONLY;
     }
 
     const { error } = await client.auth.updateUser({
@@ -137,12 +135,9 @@ class AuthService {
     return { error };
   }
 
-  isAuthenticated(): boolean {
-    const client = getSupabaseClient();
-    if (!client) {
-      return false;
-    }
-    return false;
+  async isAuthenticated(): Promise<boolean> {
+    const session = await this.getSession();
+    return session !== null;
   }
 }
 

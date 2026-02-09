@@ -49,7 +49,7 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
       }
       await transaction.complete();
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('Sync upload failed:', error);
       throw error;
     }
   }
@@ -62,7 +62,6 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
 
     const table = operation.table;
     if (!TABLES.includes(table)) {
-      console.warn(`Unknown table: ${table}`);
       return;
     }
 

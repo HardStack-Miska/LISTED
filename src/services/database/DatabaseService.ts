@@ -16,6 +16,45 @@ const generateId = (): string => {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
+interface TaskRow {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: number;
+  due_date: string | null;
+  due_time: string | null;
+  duration: number | null;
+  completed: number;
+  completed_at: string | null;
+  project_id: string | null;
+  parent_id: string | null;
+  task_order: number;
+  created_at: string;
+  updated_at: string;
+  source_page_id?: string | null;
+  source_block_id?: string | null;
+}
+
+const mapTaskRow = (row: TaskRow, labels: string[] = []): Task => ({
+  id: row.id,
+  title: row.title,
+  description: row.description ?? undefined,
+  priority: row.priority as 1 | 2 | 3 | 4,
+  dueDate: row.due_date ? new Date(row.due_date) : undefined,
+  dueTime: row.due_time ?? undefined,
+  duration: row.duration ?? undefined,
+  completed: row.completed === 1,
+  completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
+  projectId: row.project_id ?? undefined,
+  parentId: row.parent_id ?? undefined,
+  sourcePageId: row.source_page_id ?? undefined,
+  sourceBlockId: row.source_block_id ?? undefined,
+  labels,
+  order: row.task_order,
+  createdAt: new Date(row.created_at),
+  updatedAt: new Date(row.updated_at),
+});
+
 class DatabaseService {
   private static instance: DatabaseService;
   private db: SQLite.SQLiteDatabase | null = null;
@@ -61,9 +100,7 @@ class DatabaseService {
             // Ignore "duplicate column" errors for ALTER TABLE statements
             const errorMsg = err instanceof Error ? err.message : String(err);
             if (errorMsg.includes("duplicate column")) {
-              console.log(
-                `Column already exists, skipping: ${sql.substring(0, 50)}...`,
-              );
+              // Column already exists, skip
             } else {
               throw err;
             }
@@ -475,6 +512,7 @@ class DatabaseService {
     priority?: number;
     dueDate?: Date;
     dueTime?: string;
+    duration?: number;
     projectId?: string;
     parentId?: string;
     labels?: string[];
@@ -485,14 +523,15 @@ class DatabaseService {
     const now = new Date().toISOString();
 
     await this.db!.runAsync(
-      `INSERT INTO tasks (id, title, description, priority, due_date, due_time, project_id, parent_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (id, title, description, priority, due_date, due_time, duration, project_id, parent_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       id,
       task.title,
       task.description ?? null,
       task.priority ?? 4,
       task.dueDate?.toISOString() ?? null,
       task.dueTime ?? null,
+      task.duration ?? null,
       task.projectId ?? null,
       task.parentId ?? null,
       now,
@@ -516,42 +555,15 @@ class DatabaseService {
   async getTask(id: string): Promise<Task | null> {
     if (!this.db) await this.initDatabase();
 
-    const row = await this.db!.getFirstAsync<{
-      id: string;
-      title: string;
-      description: string | null;
-      priority: number;
-      due_date: string | null;
-      due_time: string | null;
-      completed: number;
-      completed_at: string | null;
-      project_id: string | null;
-      parent_id: string | null;
-      task_order: number;
-      created_at: string;
-      updated_at: string;
-    }>("SELECT * FROM tasks WHERE id = ?", id);
+    const row = await this.db!.getFirstAsync<TaskRow>(
+      "SELECT * FROM tasks WHERE id = ?",
+      id,
+    );
 
     if (!row) return null;
 
     const labels = await this.getTaskLabels(id);
-
-    return {
-      id: row.id,
-      title: row.title,
-      description: row.description ?? undefined,
-      priority: row.priority as 1 | 2 | 3 | 4,
-      dueDate: row.due_date ? new Date(row.due_date) : undefined,
-      dueTime: row.due_time ?? undefined,
-      completed: row.completed === 1,
-      completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
-      projectId: row.project_id ?? undefined,
-      parentId: row.parent_id ?? undefined,
-      labels,
-      order: row.task_order,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-    };
+    return mapTaskRow(row, labels);
   }
 
   async getTaskLabels(taskId: string): Promise<string[]> {
@@ -565,6 +577,28 @@ class DatabaseService {
     return rows.map((r) => r.label_id);
   }
 
+  private async getTaskLabelsMap(
+    taskIds: string[],
+  ): Promise<Record<string, string[]>> {
+    if (!this.db || taskIds.length === 0) return {};
+
+    const placeholders = taskIds.map(() => '?').join(', ');
+    const rows = await this.db.getAllAsync<{
+      task_id: string;
+      label_id: string;
+    }>(
+      `SELECT task_id, label_id FROM task_labels WHERE task_id IN (${placeholders})`,
+      ...taskIds,
+    );
+
+    const map: Record<string, string[]> = {};
+    for (const row of rows) {
+      if (!map[row.task_id]) map[row.task_id] = [];
+      map[row.task_id]!.push(row.label_id);
+    }
+    return map;
+  }
+
   async getTasksForToday(): Promise<Task[]> {
     if (!this.db) await this.initDatabase();
 
@@ -573,21 +607,7 @@ class DatabaseService {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const rows = await this.db!.getAllAsync<{
-      id: string;
-      title: string;
-      description: string | null;
-      priority: number;
-      due_date: string | null;
-      due_time: string | null;
-      completed: number;
-      completed_at: string | null;
-      project_id: string | null;
-      parent_id: string | null;
-      task_order: number;
-      created_at: string;
-      updated_at: string;
-    }>(
+    const rows = await this.db!.getAllAsync<TaskRow>(
       `SELECT * FROM tasks
        WHERE (due_date >= ? AND due_date < ?) OR (due_date < ? AND completed = 0)
        ORDER BY completed ASC, priority ASC, due_date ASC, task_order ASC`,
@@ -596,29 +616,9 @@ class DatabaseService {
       today.toISOString(),
     );
 
-    return Promise.all(
-      rows.map(async (row) => {
-        const labels = await this.getTaskLabels(row.id);
-        return {
-          id: row.id,
-          title: row.title,
-          description: row.description ?? undefined,
-          priority: row.priority as 1 | 2 | 3 | 4,
-          dueDate: row.due_date ? new Date(row.due_date) : undefined,
-          dueTime: row.due_time ?? undefined,
-          completed: row.completed === 1,
-          completedAt: row.completed_at
-            ? new Date(row.completed_at)
-            : undefined,
-          projectId: row.project_id ?? undefined,
-          parentId: row.parent_id ?? undefined,
-          labels,
-          order: row.task_order,
-          createdAt: new Date(row.created_at),
-          updatedAt: new Date(row.updated_at),
-        };
-      }),
-    );
+    const taskIds = rows.map((r) => r.id);
+    const labelsMap = await this.getTaskLabelsMap(taskIds);
+    return rows.map((row) => mapTaskRow(row, labelsMap[row.id] ?? []));
   }
 
   async getTasksUpcoming(): Promise<Task[]> {
@@ -627,50 +627,16 @@ class DatabaseService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const rows = await this.db!.getAllAsync<{
-      id: string;
-      title: string;
-      description: string | null;
-      priority: number;
-      due_date: string | null;
-      due_time: string | null;
-      completed: number;
-      completed_at: string | null;
-      project_id: string | null;
-      parent_id: string | null;
-      task_order: number;
-      created_at: string;
-      updated_at: string;
-    }>(
+    const rows = await this.db!.getAllAsync<TaskRow>(
       `SELECT * FROM tasks
        WHERE due_date >= ? AND completed = 0
        ORDER BY due_date ASC, priority ASC, task_order ASC`,
       today.toISOString(),
     );
 
-    return Promise.all(
-      rows.map(async (row) => {
-        const labels = await this.getTaskLabels(row.id);
-        return {
-          id: row.id,
-          title: row.title,
-          description: row.description ?? undefined,
-          priority: row.priority as 1 | 2 | 3 | 4,
-          dueDate: row.due_date ? new Date(row.due_date) : undefined,
-          dueTime: row.due_time ?? undefined,
-          completed: row.completed === 1,
-          completedAt: row.completed_at
-            ? new Date(row.completed_at)
-            : undefined,
-          projectId: row.project_id ?? undefined,
-          parentId: row.parent_id ?? undefined,
-          labels,
-          order: row.task_order,
-          createdAt: new Date(row.created_at),
-          updatedAt: new Date(row.updated_at),
-        };
-      }),
-    );
+    const taskIds = rows.map((r) => r.id);
+    const labelsMap = await this.getTaskLabelsMap(taskIds);
+    return rows.map((row) => mapTaskRow(row, labelsMap[row.id] ?? []));
   }
 
   async toggleTaskComplete(id: string): Promise<void> {
@@ -700,6 +666,7 @@ class DatabaseService {
       priority: number;
       dueDate: Date | null;
       dueTime: string | null;
+      duration: number | null;
       projectId: string | null;
       recurrence: RecurrenceRule | null;
     }>,
@@ -728,6 +695,10 @@ class DatabaseService {
     if (updates.dueTime !== undefined) {
       fields.push("due_time = ?");
       values.push(updates.dueTime);
+    }
+    if (updates.duration !== undefined) {
+      fields.push("duration = ?");
+      values.push(updates.duration);
     }
     if (updates.projectId !== undefined) {
       fields.push("project_id = ?");
@@ -870,21 +841,7 @@ class DatabaseService {
   async getTasksByLabel(labelId: string): Promise<Task[]> {
     if (!this.db) await this.initDatabase();
 
-    const rows = await this.db!.getAllAsync<{
-      id: string;
-      title: string;
-      description: string | null;
-      priority: number;
-      due_date: string | null;
-      due_time: string | null;
-      completed: number;
-      completed_at: string | null;
-      project_id: string | null;
-      parent_id: string | null;
-      task_order: number;
-      created_at: string;
-      updated_at: string;
-    }>(
+    const rows = await this.db!.getAllAsync<TaskRow>(
       `SELECT t.* FROM tasks t
        INNER JOIN task_labels tl ON t.id = tl.task_id
        WHERE tl.label_id = ?
@@ -892,29 +849,9 @@ class DatabaseService {
       labelId,
     );
 
-    return Promise.all(
-      rows.map(async (row) => {
-        const labels = await this.getTaskLabels(row.id);
-        return {
-          id: row.id,
-          title: row.title,
-          description: row.description ?? undefined,
-          priority: row.priority as 1 | 2 | 3 | 4,
-          dueDate: row.due_date ? new Date(row.due_date) : undefined,
-          dueTime: row.due_time ?? undefined,
-          completed: row.completed === 1,
-          completedAt: row.completed_at
-            ? new Date(row.completed_at)
-            : undefined,
-          projectId: row.project_id ?? undefined,
-          parentId: row.parent_id ?? undefined,
-          labels,
-          order: row.task_order,
-          createdAt: new Date(row.created_at),
-          updatedAt: new Date(row.updated_at),
-        };
-      }),
-    );
+    const taskIds = rows.map((r) => r.id);
+    const labelsMap = await this.getTaskLabelsMap(taskIds);
+    return rows.map((row) => mapTaskRow(row, labelsMap[row.id] ?? []));
   }
 
   // ==================== INLINE TASKS ====================
@@ -950,52 +887,14 @@ class DatabaseService {
   async getTasksByPageId(pageId: string): Promise<Task[]> {
     if (!this.db) await this.initDatabase();
 
-    const rows = await this.db!.getAllAsync<{
-      id: string;
-      title: string;
-      description: string | null;
-      priority: number;
-      due_date: string | null;
-      due_time: string | null;
-      completed: number;
-      completed_at: string | null;
-      project_id: string | null;
-      parent_id: string | null;
-      source_page_id: string | null;
-      source_block_id: string | null;
-      task_order: number;
-      created_at: string;
-      updated_at: string;
-    }>(
+    const rows = await this.db!.getAllAsync<TaskRow>(
       `SELECT * FROM tasks WHERE source_page_id = ? ORDER BY task_order ASC`,
       pageId,
     );
 
-    return Promise.all(
-      rows.map(async (row) => {
-        const labels = await this.getTaskLabels(row.id);
-        return {
-          id: row.id,
-          title: row.title,
-          description: row.description ?? undefined,
-          priority: row.priority as 1 | 2 | 3 | 4,
-          dueDate: row.due_date ? new Date(row.due_date) : undefined,
-          dueTime: row.due_time ?? undefined,
-          completed: row.completed === 1,
-          completedAt: row.completed_at
-            ? new Date(row.completed_at)
-            : undefined,
-          projectId: row.project_id ?? undefined,
-          parentId: row.parent_id ?? undefined,
-          sourcePageId: row.source_page_id ?? undefined,
-          sourceBlockId: row.source_block_id ?? undefined,
-          labels,
-          order: row.task_order,
-          createdAt: new Date(row.created_at),
-          updatedAt: new Date(row.updated_at),
-        };
-      }),
-    );
+    const taskIds = rows.map((r) => r.id);
+    const labelsMap = await this.getTaskLabelsMap(taskIds);
+    return rows.map((row) => mapTaskRow(row, labelsMap[row.id] ?? []));
   }
 
   async linkTaskToBlock(
@@ -1358,49 +1257,15 @@ class DatabaseService {
   async getTasksByProject(projectId: string): Promise<Task[]> {
     if (!this.db) await this.initDatabase();
 
-    const rows = await this.db!.getAllAsync<{
-      id: string;
-      title: string;
-      description: string | null;
-      priority: number;
-      due_date: string | null;
-      due_time: string | null;
-      completed: number;
-      completed_at: string | null;
-      project_id: string | null;
-      parent_id: string | null;
-      task_order: number;
-      created_at: string;
-      updated_at: string;
-    }>(
+    const rows = await this.db!.getAllAsync<TaskRow>(
       `SELECT * FROM tasks WHERE project_id = ?
        ORDER BY completed ASC, priority ASC, due_date ASC, task_order ASC`,
       projectId,
     );
 
-    return Promise.all(
-      rows.map(async (row) => {
-        const labels = await this.getTaskLabels(row.id);
-        return {
-          id: row.id,
-          title: row.title,
-          description: row.description ?? undefined,
-          priority: row.priority as 1 | 2 | 3 | 4,
-          dueDate: row.due_date ? new Date(row.due_date) : undefined,
-          dueTime: row.due_time ?? undefined,
-          completed: row.completed === 1,
-          completedAt: row.completed_at
-            ? new Date(row.completed_at)
-            : undefined,
-          projectId: row.project_id ?? undefined,
-          parentId: row.parent_id ?? undefined,
-          labels,
-          order: row.task_order,
-          createdAt: new Date(row.created_at),
-          updatedAt: new Date(row.updated_at),
-        };
-      }),
-    );
+    const taskIds = rows.map((r) => r.id);
+    const labelsMap = await this.getTaskLabelsMap(taskIds);
+    return rows.map((row) => mapTaskRow(row, labelsMap[row.id] ?? []));
   }
 
   // ==================== SUBTASKS (Sprint 5) ====================
@@ -1408,49 +1273,15 @@ class DatabaseService {
   async getSubtasks(parentId: string): Promise<Task[]> {
     if (!this.db) await this.initDatabase();
 
-    const rows = await this.db!.getAllAsync<{
-      id: string;
-      title: string;
-      description: string | null;
-      priority: number;
-      due_date: string | null;
-      due_time: string | null;
-      completed: number;
-      completed_at: string | null;
-      project_id: string | null;
-      parent_id: string | null;
-      task_order: number;
-      created_at: string;
-      updated_at: string;
-    }>(
+    const rows = await this.db!.getAllAsync<TaskRow>(
       `SELECT * FROM tasks WHERE parent_id = ?
        ORDER BY completed ASC, task_order ASC`,
       parentId,
     );
 
-    return Promise.all(
-      rows.map(async (row) => {
-        const labels = await this.getTaskLabels(row.id);
-        return {
-          id: row.id,
-          title: row.title,
-          description: row.description ?? undefined,
-          priority: row.priority as 1 | 2 | 3 | 4,
-          dueDate: row.due_date ? new Date(row.due_date) : undefined,
-          dueTime: row.due_time ?? undefined,
-          completed: row.completed === 1,
-          completedAt: row.completed_at
-            ? new Date(row.completed_at)
-            : undefined,
-          projectId: row.project_id ?? undefined,
-          parentId: row.parent_id ?? undefined,
-          labels,
-          order: row.task_order,
-          createdAt: new Date(row.created_at),
-          updatedAt: new Date(row.updated_at),
-        };
-      }),
-    );
+    const taskIds = rows.map((r) => r.id);
+    const labelsMap = await this.getTaskLabelsMap(taskIds);
+    return rows.map((row) => mapTaskRow(row, labelsMap[row.id] ?? []));
   }
 
   async createSubtask(
@@ -1604,45 +1435,11 @@ class DatabaseService {
       params.push(filters.offset);
     }
 
-    const rows = await this.db!.getAllAsync<{
-      id: string;
-      title: string;
-      description: string | null;
-      priority: number;
-      due_date: string | null;
-      due_time: string | null;
-      completed: number;
-      completed_at: string | null;
-      project_id: string | null;
-      parent_id: string | null;
-      task_order: number;
-      created_at: string;
-      updated_at: string;
-    }>(query, ...params);
+    const rows = await this.db!.getAllAsync<TaskRow>(query, ...params);
 
-    return Promise.all(
-      rows.map(async (row) => {
-        const labels = await this.getTaskLabels(row.id);
-        return {
-          id: row.id,
-          title: row.title,
-          description: row.description ?? undefined,
-          priority: row.priority as 1 | 2 | 3 | 4,
-          dueDate: row.due_date ? new Date(row.due_date) : undefined,
-          dueTime: row.due_time ?? undefined,
-          completed: row.completed === 1,
-          completedAt: row.completed_at
-            ? new Date(row.completed_at)
-            : undefined,
-          projectId: row.project_id ?? undefined,
-          parentId: row.parent_id ?? undefined,
-          labels,
-          order: row.task_order,
-          createdAt: new Date(row.created_at),
-          updatedAt: new Date(row.updated_at),
-        };
-      }),
-    );
+    const taskIds = rows.map((r) => r.id);
+    const labelsMap = await this.getTaskLabelsMap(taskIds);
+    return rows.map((row) => mapTaskRow(row, labelsMap[row.id] ?? []));
   }
 
   // ==================== SETTINGS (Sprint 5) ====================
@@ -1689,6 +1486,17 @@ class DatabaseService {
   async deleteSetting(key: string): Promise<void> {
     if (!this.db) await this.initDatabase();
     await this.db!.runAsync("DELETE FROM settings WHERE key = ?", key);
+  }
+
+  async exportAllData(): Promise<{
+    tasks: Task[];
+    projects: Project[];
+    labels: Label[];
+  }> {
+    const tasks = await this.searchTasks({});
+    const projects = await this.getProjects();
+    const labels = await this.getLabels();
+    return { tasks, projects, labels };
   }
 }
 

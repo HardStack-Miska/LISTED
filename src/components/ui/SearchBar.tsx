@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -7,7 +7,9 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, FONT_SIZES } from '@/constants';
+import { SPACING, FONT_SIZES } from '@/constants';
+import { useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
 
 interface SearchBarProps {
   value: string;
@@ -22,6 +24,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = 'Поиск заметок...',
   debounceMs = 300,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [localValue, setLocalValue] = useState(value);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<TextInput>(null);
@@ -74,7 +79,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <Ionicons
           name="search"
           size={20}
-          color={COLORS.textSecondary}
+          color={colors.textSecondary}
           style={styles.searchIcon}
         />
         <TextInput
@@ -83,7 +88,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           value={localValue}
           onChangeText={handleChangeText}
           placeholder={placeholder}
-          placeholderTextColor={COLORS.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
@@ -97,7 +102,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             <Ionicons
               name="close-circle"
               size={20}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
           </TouchableOpacity>
         </Animated.View>
@@ -106,20 +111,20 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 10,
     paddingHorizontal: SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   searchIcon: {
     marginRight: SPACING.xs,
@@ -128,7 +133,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     fontSize: FONT_SIZES.md,
-    color: COLORS.text,
+    color: colors.text,
   },
   clearButton: {
     padding: SPACING.xs,

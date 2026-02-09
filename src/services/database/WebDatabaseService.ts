@@ -61,8 +61,8 @@ class WebDatabaseService {
     if (Platform.OS !== "web") return;
     try {
       localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.error("Failed to save to localStorage:", error);
+    } catch (err) {
+      console.error(`Failed to write to localStorage key "${key}":`, err);
     }
   }
 
@@ -827,6 +827,17 @@ class WebDatabaseService {
         this.setStorage(STORAGE_KEYS.TASKS, tasks);
       }
     }
+  }
+
+  async exportAllData(): Promise<{
+    tasks: Task[];
+    projects: Project[];
+    labels: Label[];
+  }> {
+    const tasks = await this.searchTasks({});
+    const projects = await this.getProjects();
+    const labels = await this.getLabels();
+    return { tasks, projects, labels };
   }
 }
 

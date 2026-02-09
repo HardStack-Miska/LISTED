@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
 ## Расположение
 
 - UI компоненты: `src/components/ui/${NAME}.tsx`
-- Блоки редактора: `src/components/blocks/${NAME}.tsx`
+- Компоненты задач: `src/components/tasks/${NAME}.tsx`
 - Экраны: `src/app/${name}.tsx`
 
 ## Checklist

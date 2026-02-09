@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,19 @@ import {
   TextInput,
   Modal,
   SafeAreaView,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView as SAV } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS, SPACING, FONT_SIZES, PRESET_COLORS } from "@/constants";
-import { useTaskContext } from "@/contexts";
-import { useProjects, useLabels } from "@/hooks";
-import { TaskItem } from "@/components/tasks/TaskItem";
-import { QuickAddTask } from "@/components/tasks/QuickAddTask";
-import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import type { Task, Priority } from "@/types";
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView as SAV } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { SPACING, FONT_SIZES, PRESET_COLORS } from '@/constants';
+import { useTaskContext, useTheme } from '@/contexts';
+import type { Colors } from '@/contexts';
+import { useProjects, useLabels } from '@/hooks';
+import { TaskItem } from '@/components/tasks/TaskItem';
+import { QuickAddTask } from '@/components/tasks/QuickAddTask';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import type { Task, Priority } from '@/types';
 
 export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,10 +28,12 @@ export default function ProjectDetailScreen() {
   const { allTasks, toggleTask, deleteTask, createTask } = useTaskContext();
   const { projects, updateProject, deleteProject } = useProjects();
   const { labels } = useLabels();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
-  const [name, setName] = useState("");
+  const [name, setName] = useState('');
   const [color, setColor] = useState<string>(PRESET_COLORS[0]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTaskDialog, setDeleteTaskDialog] = useState<{
@@ -75,8 +78,8 @@ export default function ProjectDetailScreen() {
     try {
       await updateProject(id, { name: name.trim(), color });
       setShowEditor(false);
-    } catch (error) {
-      console.error("Error updating project:", error);
+    } catch {
+      // Update failed
     }
   }, [id, name, color, updateProject]);
 
@@ -87,8 +90,8 @@ export default function ProjectDetailScreen() {
       await deleteProject(id);
       setShowDeleteConfirm(false);
       router.back();
-    } catch (error) {
-      console.error("Error deleting project:", error);
+    } catch {
+      // Delete failed
     }
   }, [id, deleteProject, router]);
 
@@ -143,10 +146,10 @@ export default function ProjectDetailScreen() {
 
   if (!project) {
     return (
-      <SAV style={styles.container} edges={["top"]}>
+      <SAV style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Проект не найден</Text>
         </View>
@@ -155,10 +158,10 @@ export default function ProjectDetailScreen() {
   }
 
   return (
-    <SAV style={styles.container} edges={["top"]}>
+    <SAV style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <View
@@ -169,7 +172,7 @@ export default function ProjectDetailScreen() {
           </Text>
         </View>
         <TouchableOpacity onPress={handleEditProject} style={styles.editButton}>
-          <Ionicons name="pencil" size={20} color={COLORS.text} />
+          <Ionicons name="pencil" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -189,7 +192,7 @@ export default function ProjectDetailScreen() {
             <Ionicons
               name="checkbox-outline"
               size={48}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
             <Text style={styles.emptyTitle}>Нет задач</Text>
             <Text style={styles.emptyText}>
@@ -264,7 +267,7 @@ export default function ProjectDetailScreen() {
               value={name}
               onChangeText={setName}
               placeholder="Название проекта"
-              placeholderTextColor={COLORS.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               autoFocus
             />
 
@@ -294,7 +297,7 @@ export default function ProjectDetailScreen() {
                 setShowDeleteConfirm(true);
               }}
             >
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+              <Ionicons name="trash-outline" size={20} color={colors.danger} />
               <Text style={styles.deleteText}>Удалить проект</Text>
             </TouchableOpacity>
           </View>
@@ -314,7 +317,7 @@ export default function ProjectDetailScreen() {
 
       <ConfirmDialog
         visible={deleteTaskDialog.visible}
-        title={`Удалить "${deleteTaskDialog.task?.title ?? "задачу"}"?`}
+        title={`Удалить "${deleteTaskDialog.task?.title ?? 'задачу'}"?`}
         message="Это действие нельзя отменить."
         confirmText="Удалить"
         cancelText="Отмена"
@@ -331,160 +334,161 @@ export default function ProjectDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backButton: {
-    padding: SPACING.xs,
-    marginRight: SPACING.sm,
-  },
-  headerTitleContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  projectColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  headerTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
-    flex: 1,
-  },
-  editButton: {
-    padding: SPACING.xs,
-  },
-  stats: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  statsText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-  },
-  listContent: {
-    paddingBottom: 100,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: SPACING.xl * 2,
-  },
-  emptyTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
-    marginTop: SPACING.md,
-  },
-  emptyText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.sm,
-  },
-  completedSection: {
-    marginTop: SPACING.lg,
-    paddingTop: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  completedTitle: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "600",
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-  },
-  editorContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  editorHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  editorTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
-  },
-  cancelText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
-  },
-  saveText: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
-  saveTextDisabled: {
-    color: COLORS.textSecondary,
-  },
-  editorContent: {
-    padding: SPACING.md,
-  },
-  label: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "600",
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: SPACING.md,
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  colorGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.sm,
-  },
-  colorOption: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  colorOptionSelected: {
-    borderWidth: 3,
-    borderColor: COLORS.text,
-  },
-  deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: SPACING.xl,
-    padding: SPACING.md,
-    gap: SPACING.sm,
-  },
-  deleteText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.danger,
-  },
-});
+const createStyles = (colors: Colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      padding: SPACING.xs,
+      marginRight: SPACING.sm,
+    },
+    headerTitleContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+    },
+    projectColor: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+    },
+    headerTitle: {
+      fontSize: FONT_SIZES.lg,
+      fontWeight: '600',
+      color: colors.text,
+      flex: 1,
+    },
+    editButton: {
+      padding: SPACING.xs,
+    },
+    stats: {
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    statsText: {
+      fontSize: FONT_SIZES.sm,
+      color: colors.textSecondary,
+    },
+    listContent: {
+      paddingBottom: 100,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: SPACING.xl * 2,
+    },
+    emptyTitle: {
+      fontSize: FONT_SIZES.lg,
+      fontWeight: '600',
+      color: colors.text,
+      marginTop: SPACING.md,
+    },
+    emptyText: {
+      fontSize: FONT_SIZES.md,
+      color: colors.textSecondary,
+      marginTop: SPACING.sm,
+    },
+    completedSection: {
+      marginTop: SPACING.lg,
+      paddingTop: SPACING.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    completedTitle: {
+      fontSize: FONT_SIZES.sm,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: SPACING.sm,
+      paddingHorizontal: SPACING.md,
+    },
+    editorContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    editorHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: SPACING.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    editorTitle: {
+      fontSize: FONT_SIZES.lg,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    cancelText: {
+      fontSize: FONT_SIZES.md,
+      color: colors.textSecondary,
+    },
+    saveText: {
+      fontSize: FONT_SIZES.md,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    saveTextDisabled: {
+      color: colors.textSecondary,
+    },
+    editorContent: {
+      padding: SPACING.md,
+    },
+    label: {
+      fontSize: FONT_SIZES.sm,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: SPACING.sm,
+      marginTop: SPACING.md,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: SPACING.md,
+      fontSize: FONT_SIZES.md,
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    colorGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: SPACING.sm,
+    },
+    colorOption: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    colorOptionSelected: {
+      borderWidth: 3,
+      borderColor: colors.text,
+    },
+    deleteButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: SPACING.xl,
+      padding: SPACING.md,
+      gap: SPACING.sm,
+    },
+    deleteText: {
+      fontSize: FONT_SIZES.md,
+      color: colors.danger,
+    },
+  });
